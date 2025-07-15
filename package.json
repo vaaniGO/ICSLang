@@ -1,7 +1,8 @@
 {
-    "name": "ics-language-support",
-    "displayName": "ICS Language Support",
-    "description": "Language support for ICS (Integrated Computer Science) format with LSP and compiler",
+    "name": "boop-for-cs-pedagogy",
+    "displayName": "BOOP!",
+    "description": "Support for a novel CS pedagogical approach",
+    "published": "VaaniGoenka",
     "version": "0.0.1",
     "engines": {
         "vscode": "^1.74.0"
@@ -40,11 +41,6 @@
             {
                 "command": "ics.compile",
                 "title": "Compile ICS",
-                "category": "ICS"
-            },
-            {
-                "command": "ics.validate",
-                "title": "Validate ICS",
                 "category": "ICS"
             }
         ],

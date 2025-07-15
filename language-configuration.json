@@ -41,11 +41,6 @@
                 "command": "ics.compile",
                 "title": "Compile ICS",
                 "category": "ICS"
-            },
-            {
-                "command": "ics.validate",
-                "title": "Validate ICS",
-                "category": "ICS"
             }
         ],
         "keybindings": [

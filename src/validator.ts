@@ -26,7 +26,7 @@ export class ICSValidator {
         requiredSubsections.set('blueprint', ['requires', 'ensures']);
         requiredSubsections.set('induction', ['base case', 'induction hypothesis', 'inductive step']);
         requiredSubsections.set('invariant', ['pre-condition', 'after the ith step', 'after the (i+1)th step', 'post-condition']);
-        requiredSubsections.set('header', ['assignment', 'student', 'date', 'collaborators', 'problem']);
+        requiredSubsections.set('header', ['assignment', 'student', 'date', 'collaborators']);
 
         // Track section hierarchy - use a stack to handle nested sections
         const sectionStack: string[] = [];

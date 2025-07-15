@@ -10,14 +10,18 @@ export interface ICSSection {
     proofSubsections?: { [key: string]: string };
 }
 
+export interface ICSProblem {
+    title: string;
+    sections: ICSSection[];
+}
+
 export interface ICSDocument {
     assignmentName: string;
     studentName: string;
     date: string;
     collaborators: string;
     verified: string;
-    problemTitle: string;
-    sections: ICSSection[];
+    problems: ICSProblem[];
 }
 
 export class ICSCompiler {
@@ -101,20 +105,33 @@ export class ICSCompiler {
             date: '',
             collaborators: '',
             verified: '',
-            problemTitle: '',
-            sections: []
+            problems: []
         };
 
+        let currentProblem: ICSProblem | null = null;
         let currentSection: ICSSection | null = null;
         let currentContent: string[] = [];
+        let inProblem = false;
         let inSection = false;
-        let inHeader = true;
+        let inHeader = false;
         let sectionStack: { name: string; section: ICSSection | null }[] = [];
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
 
-            // Parse header information
+            // Check for header section start
+            if (line === '<<header') {
+                inHeader = true;
+                continue;
+            }
+
+            // Check for header section end
+            if (line === 'header>>' && inHeader) {
+                inHeader = false;
+                continue;
+            }
+
+            // Parse header information only when inside header tags
             if (inHeader) {
                 if (line.startsWith('assignment:')) {
                     doc.assignmentName = line.substring(11).trim();
@@ -126,10 +143,65 @@ export class ICSCompiler {
                     doc.collaborators = line.substring(14).trim();
                 } else if (line.startsWith('verified:')) {
                     doc.verified = line.substring(9).trim();
-                } else if (line.startsWith('problem:')) {
-                    doc.problemTitle = line.substring(8).trim();
-                    inHeader = false;
                 }
+                continue;
+            }
+
+            // Skip processing if we're still in header
+            if (inHeader) {
+                continue;
+            }
+
+            // Check for problem start
+            const problemStartMatch = line.match(/^<<problem\s+(.+)$/);
+            if (problemStartMatch) {
+                // End previous problem if exists
+                if (currentProblem && inProblem) {
+                    // End current section if exists
+                    if (currentSection && inSection) {
+                        this.processSectionContent(currentSection, currentContent.join('\n'));
+                        currentProblem.sections.push(currentSection);
+                    }
+                    doc.problems.push(currentProblem);
+                }
+
+                // Start new problem
+                currentProblem = {
+                    title: problemStartMatch[1].trim(),
+                    sections: []
+                };
+                currentSection = null;
+                currentContent = [];
+                inProblem = true;
+                inSection = false;
+                sectionStack = [];
+                continue;
+            }
+
+            // Check for problem end
+            if (line === 'problem>>' && inProblem) {
+                // End current section if exists
+                if (currentSection && inSection) {
+                    this.processSectionContent(currentSection, currentContent.join('\n'));
+                    currentProblem!.sections.push(currentSection);
+                }
+
+                // End current problem
+                if (currentProblem) {
+                    doc.problems.push(currentProblem);
+                }
+
+                currentProblem = null;
+                currentSection = null;
+                currentContent = [];
+                inProblem = false;
+                inSection = false;
+                sectionStack = [];
+                continue;
+            }
+
+            // Only process sections if we're inside a problem
+            if (!inProblem) {
                 continue;
             }
 
@@ -148,7 +220,7 @@ export class ICSCompiler {
                         // End previous section if exists
                         if (currentSection && inSection) {
                             this.processSectionContent(currentSection, currentContent.join('\n'));
-                            doc.sections.push(currentSection);
+                            currentProblem!.sections.push(currentSection);
                         }
 
                         // Start new proof section
@@ -184,7 +256,7 @@ export class ICSCompiler {
                     // End previous section if exists
                     if (currentSection && inSection) {
                         this.processSectionContent(currentSection, currentContent.join('\n'));
-                        doc.sections.push(currentSection);
+                        currentProblem!.sections.push(currentSection);
                     }
 
                     // Start new section
@@ -240,7 +312,7 @@ export class ICSCompiler {
                     if (sectionStack.length === 0) {
                         if (currentSection && inSection) {
                             this.processSectionContent(currentSection, currentContent.join('\n'));
-                            doc.sections.push(currentSection);
+                            currentProblem!.sections.push(currentSection);
                         }
 
                         currentSection = null;
@@ -258,9 +330,13 @@ export class ICSCompiler {
         }
 
         // Handle case where document ends without proper closing
-        if (currentSection && inSection) {
-            this.processSectionContent(currentSection, currentContent.join('\n'));
-            doc.sections.push(currentSection);
+        if (currentProblem && inProblem) {
+            // End current section if exists
+            if (currentSection && inSection) {
+                this.processSectionContent(currentSection, currentContent.join('\n'));
+                currentProblem.sections.push(currentSection);
+            }
+            doc.problems.push(currentProblem);
         }
 
         return doc;
@@ -490,9 +566,8 @@ export class ICSCompiler {
         <div class="verified">Formally verified? ${doc.verified}</div>
     </div>
 
-    <div class="begin-problem">
-        <div class="problem-title">${doc.problemTitle}</div>
-        ${doc.sections.map(section => this.generateSectionHTML(section)).join('\n')}
+    <div class="document-content">
+        ${doc.problems.map(problem => this.generateProblemHTML(problem)).join('\n')}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
@@ -501,6 +576,13 @@ export class ICSCompiler {
 </body>
 
 </html>`;
+    }
+
+    private generateProblemHTML(problem: ICSProblem): string {
+        return `    <div class="problem">
+        <div class="problem-title">${problem.title}</div>
+        ${problem.sections.map(section => this.generateSectionHTML(section)).join('\n')}
+    </div>`;
     }
 
     private generateSectionHTML(section: ICSSection): string {

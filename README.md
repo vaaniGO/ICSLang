@@ -1,107 +1,105 @@
-ICS Language Support Extension
-A VS Code extension that provides comprehensive language support for ICS (Integrated Computer Science) format files, including syntax highlighting, auto-completion, validation, and HTML compilation.
+![Alt Text](icon.png)
+### BOOP! A novel submission system for students of computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
+# 📝 Language Syntax
 
-Features
-🎯 Auto-completion
-Smart completion for ICS keywords and sections
-Automatic closing tag insertion (e.g., typing \proof auto-completes to \proof ... \proof)
-Context-aware subsection suggestions
-Step reference completion with navigation
-📝 Syntax Highlighting
-Custom syntax highlighting for ICS sections
-OCaml code highlighting within \ocaml code sections
-Special highlighting for step references and keywords
-✅ Validation & Diagnostics
-Real-time validation of ICS document structure
-Ensures all required subsections are present
-Validates that all opened sections are properly closed
-Warns about invalid step references
-🔧 Compilation
-Compiles ICS files to structured HTML with custom CSS
-Generates beautiful, printable documents
-Includes step reference linking and navigation
-Responsive design for different screen sizes
-🔍 Navigation
-Go-to-definition for step references
-Hover information for steps
-Quick navigation between sections
-Installation
-Clone this repository
-Open in VS Code
-Run npm install to install dependencies
-Press F5 to launch the extension in a new Extension Development Host window
-Usage
-Creating an ICS Document
-Create a new file with the .ics extension and start typing. The extension will provide auto-completion for all ICS keywords.
+The ICS language syntax is designed to be simple and intuitive, allowing users to write structured documents easily. Each section is enclosed using double angle brackets (`<< >>`) and follows a defined tag-based hierarchy.
 
-Main Sections
-The ICS format supports four main sections:
+---
 
-Blueprint (\blueprint ... \blueprint)
-Must contain requires: and ensures: subsections
-Operational Steps (\operational steps ... \operational steps)
-Contains numbered steps (1., 2., 3., etc.)
-Steps can be referenced elsewhere in the document
-OCaml Code (\ocaml code ... \ocaml code)
-Contains OCaml implementation with syntax highlighting
-Proof (\proof ... \proof)
-Can contain either induction or invariant proofs
-Induction: requires base case:, induction hypothesis:, inductive step:
-Invariant: requires pre-condition:, after the ith step:, after the (i+1)th step:, post-condition:
-Step References
-In the operational steps section, define steps like:
+## 🔖 Main Tags & Structure
 
-\operational steps
-1. Initialize variables
-2. Check condition
-3. Process result
-\operational steps
-Anywhere else in the document, you can reference these steps by typing step 1, step 2, etc. The extension will:
+### 1. 📌 Problem Block
 
-Provide auto-completion for available steps
-Show hover information
-Allow click-to-navigate to step definition
-Commands
-Compile ICS (Ctrl+Shift+C): Compiles the current ICS file to HTML
-Validate ICS: Validates the current document structure
-Configuration
-You can configure the extension through VS Code settings:
+```bash
+<<problem n: "Title of the Problem"
 
-ics.outputPath: Output directory for compiled HTML files (default: ./output)
-ics.enableAutoCompletion: Enable/disable auto-completion features (default: true)
-Example
-See example.ics for a complete example of an ICS document demonstrating all features.
+    ... (all other blocks go here)
 
-Development
-File Structure
-├── src/
-│   ├── extension.ts     # Main extension file
-│   ├── compiler.ts      # ICS to HTML compiler
-│   └── validator.ts     # Document validation
-├── syntaxes/
-│   └── ics.tmLanguage.json  # Syntax grammar
-├── language-configuration.json  # Language configuration
-└── package.json         # Extension manifest
-Building
-bash
-npm run compile
-Testing
-bash
-npm run test
-Contributing
-Fork the repository
-Create a feature branch
-Make your changes
-Add tests if applicable
-Submit a pull request
-License
-MIT License - see LICENSE file for details.
+problem>>
+```
 
-Changelog
-0.0.1
-Initial release
-Basic syntax highlighting
-Auto-completion for keywords
-Document validation
-HTML compilation
-Step reference navigation
+### 2. 📝 Blueprint
+This lays out the correctness criteria for the input and output of the program.
+
+```bash
+<<blueprint
+
+    requires: [conditions that must hold before execution]
+
+    ensures: [conditions that must hold after execution]
+
+blueprint>>
+```
+
+### 3. 🛠️ Operational Steps
+This section is for the user to write down 'informal' steps as if they were explaining a human what to do to solve the problem.
+```bash
+<<operational steps
+
+    step 1: [description]
+    step 2: [description]
+    ...
+    step n: [description]
+
+operational steps>>
+```
+
+### 4. 💻 Ocaml Code
+Write your standard ICS-friendly OCaml code here. It will be validated by the ICS OCaml validator!
+```bash
+<<ocaml code
+
+    (* Write your OCaml code here *)
+    let rec search arr target = ...
+
+ocaml code>>
+```
+
+### 5. 📖 Proof
+Prove that your blueprint correctness criteria holds.
+```bash
+<<proof
+
+    <<induction
+
+        base case: [describe the base case]
+        induction hypothesis: [assume for i]
+        inductive step: [prove for i+1]
+
+    induction>>
+
+    <<invariant
+
+        pre-condition: [before the loop starts]
+        after the ith step: [what holds true]
+        after the (i+1)th step: [expected result]
+        post-condition: [after loop ends]
+
+    invariant>>
+
+proof>>
+```
+
+## Syntax rules:
+1. Each solution must be enclosed in an appropriate problem tag.
+2. Each main tag must contain all its sub-tags. If the user does not have anything to write under a tag, they may leave it blank.
+3. The header must contain all required information.
+
+## Usage:
+1. Install dependencies
+2. Create your .ics file
+3. Open the command palette (Cmd+Shift+P or Ctrl+Shift+P)
+4. Type ICS
+5. Select ICS: Compile ICS 
+
+## Information
+Developer and Maintainer: Vaani Goenka \
+@ email: vaani.goenka_ug2024@ashoka.edu.in \
+Changelog \
+0.0.1 \
+Initial release \
+Basic syntax highlighting \
+Auto-completion for keywords \
+Document validation \
+HTML compilation 
+
