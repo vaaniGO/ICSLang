@@ -1,4 +1,4 @@
-![Alt Text](icon.png)
+![Alt Text](https://github.com/vaaniGO/ICSLang/blob/main/icon.png)
 ### BOOP! A novel submission system for students of computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
 # 📝 Language Syntax
 

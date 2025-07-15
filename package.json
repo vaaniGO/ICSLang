@@ -13,6 +13,10 @@
         "Linters",
         "Formatters"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/vaaniGO/ICSLang/tree/main"
+    },
     "main": "./out/extension.js",
     "activationEvents": [
         "onLanguage:ics"
