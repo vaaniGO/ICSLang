@@ -4,6 +4,7 @@
     "description": "Support for a novel CS pedagogical approach",
     "published": "VaaniGoenka",
     "version": "0.0.1",
+    "icon": "icon.png",
     "engines": {
         "vscode": "^1.74.0"
     },
