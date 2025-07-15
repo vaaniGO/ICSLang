@@ -1,9 +1,12 @@
+<<header
 assignment: Assignment 5: Sorting & Searching
 student: Vaani Goenka
 date: 15th June 2025
 collaborators: None
 problem: Problem 1: Searching - Everyone's a suspect!
+header>>
 
+<<problem 1: Searching - Every element is a suspect!
 <<blueprint
 requires:
 A static array of type int and a target search element also of type int.
@@ -50,3 +53,5 @@ post-condition:
 When i >= length arr, the loop breaks. If index = -1, then the element does not exist in the entire array. Otherwise, 0 <= index <= length arr - 1, indicating the target exists at that index.
 invariant>>
 proof>>
+
+problem>>

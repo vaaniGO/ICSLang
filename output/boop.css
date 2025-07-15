@@ -1,0 +1,209 @@
+:root {
+    --blue: #3674B5;
+    --purple: #7F55B1;
+    --orange: #ef7f08;
+    --green: #096B68;
+}
+
+* {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    font-weight: 550;
+}
+
+.assignment-name {
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.student-name,
+.date,
+.collaborators,
+.verified {
+    font-size: 20px;
+}
+
+.assignment-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+    border: 2px solid black;
+    padding: 10px;
+    width: 60%;
+    align-self: center;
+}
+
+.header {
+    display: flex;
+    height: 100px;
+    align-items: self-end;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 20px;
+}
+
+.header .header-title {
+    font-size: 16px;
+}
+
+.header .header-img {
+    height: inherit;
+    width: auto;
+}
+
+.begin-problem {
+    margin: 20px;
+}
+
+.problem-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    margin-left: 0px;
+}
+
+.blueprint-requires-header,
+.blueprint-ensures-header,
+.step-header,
+.invariant-header {
+    font-weight: 1000;
+    background-color: var(--blue);
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    opacity: 0.8;
+}
+
+.step-header {
+    background-color: var(--purple);
+}
+
+.invariant-header {
+    background-color: var(--green);
+}
+
+.section-header {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    width: auto;
+    padding-left: 10px;
+}
+
+.blueprint-header {
+    background-color: var(--blue);
+}
+
+.operational-steps-header {
+    background-color: var(--purple);
+}
+
+.ocaml-code-header {
+    background-color: var(--orange);
+}
+
+.proof-header {
+    background-color: var(--green);
+}
+
+.proof-sub-header {
+    color: var(--green);
+    padding-left: 0;
+}
+
+.blueprint {
+    border-left: 5px solid var(--blue);
+    padding-left: 10px;
+}
+
+.operational-steps {
+    border-left: 5px solid var(--purple);
+    padding-left: 10px;
+}
+
+.ocaml-code {
+    border-left: 5px solid var(--orange);
+    padding-left: 10px;
+}
+
+.proof {
+    border-left: 5px solid var(--green);
+    padding-left: 10px;
+}
+
+.section {
+    margin: 20px 0 20px 0px;
+    line-height: 30px;
+}
+
+.line-ref {
+    color: var(--green);
+    font-weight: bold;
+    text-decoration: underline;
+    font-style: italic;
+}
+
+.sub-section {
+    margin-bottom: 15px;
+}
+
+.invariant {
+    margin-bottom: 15px;
+}
+
+.code {
+    background: transparent;
+    color: inherit;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.code pre {
+    margin: 0;
+    white-space: pre-wrap;
+    background: transparent;
+}
+
+.code pre code {
+    background: transparent;
+}
+
+.step {
+    margin-bottom: 15px;
+}
+
+/* Prism.js styling compatibility */
+.line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: linenumber;
+}
+
+.line-numbers > code {
+    position: relative;
+    white-space: inherit;
+}
+
+.line-numbers .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 0;
+    font-size: 100%;
+    left: -3.8em;
+    width: 3em;
+    letter-spacing: -1px;
+    border-right: 1px solid #999;
+    user-select: none;
+}

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="boop.css">
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
+    <title>ICS Document</title>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-title">BOOP! ICS Summer 2025 | Professor Aalok Thakkar</div>
+        <img class="header-img" src="boop.png">
+    </div>
+    
+    <div class="assignment-header">
+        <div class="assignment-name">Assignment 5: Sorting & Searching</div>
+        <div class="student-name">Vaani Goenka</div>
+        <div class="date">15th June 2025</div>
+        <div class="collaborators">Collaborators: None</div>
+        <div class="verified">Formally verified? </div>
+    </div>
+
+    <div class="document-content">
+            <div class="problem">
+        <div class="problem-title">1: Searching - Every element is a suspect!</div>
+                <div class="section">
+            <div class="blueprint-header section-header">BLUEPRINT</div>
+            <div class="blueprint">
+                <div class="blueprint-requires sub-section">
+                    <span class="blueprint-requires-header">Requires: </span> <br>
+                    A static array of type int and a target search element also of type int.
+                </div>
+                <div class="blueprint-ensures sub-section">
+                    <span class="blueprint-ensures-header">Ensures: </span> <br>
+                    The output of the program is the index of the target integer in the array, or -1 if it does not exist in the given array.
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <div class="operational-steps-header section-header">OPERATIONAL STEPS</div>
+            <div class="operational-steps">
+            </div>
+        </div>
+        <div class="section">
+            <div class="ocaml-code-header section-header">OCAML CODE</div>
+            <div class="ocaml-code">
+                <div class="code sub-section">
+                    <pre class="line-numbers"><code class="language-ocaml">let search (arr : int list) (target : int) : int =
+  let i = ref 0 in
+  let index = ref (-1) in
+  let len = List.length arr in
+  while !i &lt; len do
+    match List.nth arr !i with
+    | n when n=target -&gt; index := !i; i := len;
+    | _ -&gt; i := !i + 1;
+  done;
+  !index
+;;</code></pre>
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <div class="proof-header section-header">PROOF</div>
+            <div class="proof">
+                <div class="proof-sub-header section-header">INVARIANT</div>
+                <div class="invariant pre-condition sub-section">
+                    <span class="invariant-header">Pre-condition: </span> <br>
+                    Before the loop begins, index = -1 and no element has been compared yet, so the element has not been found yet.
+                </div>
+                <div class="invariant ith-condition">
+                    <span class="invariant-header">After the ith iteration: </span> <br>
+                    After any kth iteration, if index = -1 then the element does not exist in arr[0 : k], else if index = k then the element has been found at index k.
+                </div>
+                <div class="invariant i-1th-condition">
+                    <span class="invariant-header">After the after the (i+1)th stepth iteration: </span> <br>
+                    If the after the (i+1)th stepth element equals target, then index = i+1 and the loop breaks. Otherwise, we know from step 1 that the element does not exist in arr[0 : i+1], so index remains -1.
+                </div>
+                <div class="invariant post-condition">
+                    <span class="invariant-header">Post-condition: </span> <br>
+                    When i &gt;= length arr, the loop breaks. If index = -1, then the element does not exist in the entire array. Otherwise, 0 &lt;= index &lt;= length arr - 1, indicating the target exists at that index.
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ocaml.min.js"></script>
+</body>
+
+</html>
