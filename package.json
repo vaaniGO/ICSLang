@@ -2,7 +2,7 @@
     "name": "boop-for-cs-pedagogy",
     "displayName": "BOOP!",
     "description": "Support for a novel CS pedagogical approach",
-    "published": "VaaniGoenka",
+    "publisher": "VaaniGoenka",
     "version": "0.0.1",
     "icon": "icon.png",
     "engines": {
