@@ -1,0 +1,25 @@
+(lang dune 3.17)
+
+(name ppx_1)
+
+(generate_opam_files true)
+
+(source
+ (github username/reponame))
+
+(authors "Vaani Goenka <vaani.goenka_ug2024@ashoka.edu.in>")
+
+(maintainers "Vaani Goenka <vaani.goenka_ug2024@ashoka.edu.in>")
+
+(license MIT)
+
+(documentation https://url/to/documentation)
+
+(package
+ (name ppx_1)
+ (synopsis "ICS OCaml Preprocessor!")
+ (description "All ICS code must pass the preprocessor tests!")
+ (tags
+  ("AI" "AI-Resistant Programmning" your project)))
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html

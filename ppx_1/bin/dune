@@ -1,0 +1,7 @@
+(executable
+ (name checker)
+ (public_name checker)
+ (libraries ppx_1 ppxlib))
+
+; Do not edit this, this defines checker.ml as an executable which uses our custom library called ppx_1. 
+; Checker is needed in order to treat our library as an executable to run it on any file.

@@ -1,0 +1,19 @@
+lib: [
+  "_build/install/default/lib/ppx_1/META"
+  "_build/install/default/lib/ppx_1/dune-package"
+  "_build/install/default/lib/ppx_1/opam"
+  "_build/install/default/lib/ppx_1/ppx_1.a"
+  "_build/install/default/lib/ppx_1/ppx_1.cma"
+  "_build/install/default/lib/ppx_1/ppx_1.cmi"
+  "_build/install/default/lib/ppx_1/ppx_1.cmt"
+  "_build/install/default/lib/ppx_1/ppx_1.cmx"
+  "_build/install/default/lib/ppx_1/ppx_1.cmxa"
+  "_build/install/default/lib/ppx_1/ppx_1.ml"
+]
+libexec: [
+  "_build/install/default/lib/ppx_1/ppx.exe"
+  "_build/install/default/lib/ppx_1/ppx_1.cmxs"
+]
+bin: [
+  "_build/install/default/bin/checker"
+]

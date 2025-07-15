@@ -1,0 +1,31 @@
+(lang dune 3.17)
+(name ppx_1)
+(sections (lib .) (libexec .) (bin ../../bin))
+(files
+ (lib
+  (META
+   dune-package
+   opam
+   ppx_1.a
+   ppx_1.cma
+   ppx_1.cmi
+   ppx_1.cmt
+   ppx_1.cmx
+   ppx_1.cmxa
+   ppx_1.ml))
+ (libexec (ppx.exe ppx_1.cmxs))
+ (bin (checker)))
+(library
+ (name ppx_1)
+ (kind ppx_rewriter)
+ (archives (byte ppx_1.cma) (native ppx_1.cmxa))
+ (plugins (byte ppx_1.cma) (native ppx_1.cmxs))
+ (native_archives ppx_1.a)
+ (requires ppxlib.ast ppxlib)
+ (main_module_name Ppx_1)
+ (modes byte native)
+ (modules
+  (singleton
+   (obj_name ppx_1)
+   (visibility public)
+   (source (path Ppx_1) (impl (path ppx_1.ml))))))
