@@ -3,7 +3,7 @@
     "displayName": "BOOP @shoka",
     "description": "Support for a novel CS pedagogical approach",
     "publisher": "VaaniGoenka",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.74.0"
