@@ -1,0 +1,52 @@
+assignment: Assignment 5: Sorting & Searching
+student: Vaani Goenka
+date: 15th June 2025
+collaborators: None
+problem: Problem 1: Searching - Everyone's a suspect!
+
+<<blueprint
+requires:
+A static array of type int and a target search element also of type int.
+
+ensures:
+The output of the program is the index of the target integer in the array, or -1 if it does not exist in the given array.
+blueprint>>
+
+<<operational steps
+1. We initialize two variables: i (current index) and index (found element index) with -1.
+2. We get the length of the array to set the upper limit for our loop.
+3. While the current index is less than array length, we check if the current element equals target.
+4. If found, we set index = i and break the loop by setting i = len.
+5. Else, we increment i and continue to the next iteration.
+6. Return the index value.
+operational steps>>
+
+<<ocaml code
+let search (arr : int list) (target : int) : int =
+  let i = ref 0 in
+  let index = ref (-1) in
+  let len = List.length arr in
+  while !i < len do
+    match List.nth arr !i with
+    | n when n=target -> index := !i; i := len;
+    | _ -> i := !i + 1;
+  done;
+  !index
+;;
+ocaml code>>
+
+<<proof
+<<invariant
+pre-condition:
+Before the loop begins, index = -1 and no element has been compared yet, so the element has not been found yet.
+
+after the ith step:
+After any kth iteration, if index = -1 then the element does not exist in arr[0 : k], else if index = k then the element has been found at index k.
+
+after the (i+1)th step:
+If the after the (i+1)th stepth element equals target, then index = i+1 and the loop breaks. Otherwise, we know from step 1 that the element does not exist in arr[0 : i+1], so index remains -1.
+
+post-condition:
+When i >= length arr, the loop breaks. If index = -1, then the element does not exist in the entire array. Otherwise, 0 <= index <= length arr - 1, indicating the target exists at that index.
+invariant>>
+proof>>

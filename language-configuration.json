@@ -1,0 +1,89 @@
+{
+    "name": "ics-language-support",
+    "displayName": "ICS Language Support",
+    "description": "Language support for ICS (Integrated Computer Science) format with LSP and compiler",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters",
+        "Formatters"
+    ],
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onLanguage:ics"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "ics",
+                "aliases": [
+                    "ICS",
+                    "ics"
+                ],
+                "extensions": [
+                    ".ics"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "ics",
+                "scopeName": "source.ics",
+                "path": "./syntaxes/ics.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "ics.compile",
+                "title": "Compile ICS",
+                "category": "ICS"
+            },
+            {
+                "command": "ics.validate",
+                "title": "Validate ICS",
+                "category": "ICS"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "ics.compile",
+                "key": "ctrl+shift+c",
+                "when": "editorLangId == ics"
+            }
+        ],
+        "configuration": {
+            "title": "ICS Language",
+            "properties": {
+                "ics.outputPath": {
+                    "type": "string",
+                    "default": "./output",
+                    "description": "Output path for compiled HTML files"
+                },
+                "ics.enableAutoCompletion": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable auto-completion for ICS keywords"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.74.0",
+        "@types/node": "16.x",
+        "typescript": "^4.9.4"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^8.1.0",
+        "vscode-languageserver": "^8.1.0",
+        "vscode-languageserver-textdocument": "^1.0.8"
+    }
+}

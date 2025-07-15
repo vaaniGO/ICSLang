@@ -1,0 +1,115 @@
+{
+    "scopeName": "source.ics",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#ocaml-code"
+        },
+        {
+            "include": "#step-references"
+        },
+        {
+            "include": "#operational-steps-block"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.ics",
+                    "match": "\\b(blueprint|operational steps|ocaml code|proof|induction|invariant|header)\\b"
+                },
+                {
+                    "name": "keyword.other.ics",
+                    "match": "\\b(requires|ensures|base case|induction hypothesis|inductive step|pre-condition|after the ith step|after the \\(i\\+1\\)th step|post-condition|assignment|student|date|collaborators|problem)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.ics",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.ics",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "numbers": {
+            "name": "constant.numeric.ics",
+            "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.ics",
+                    "begin": "//",
+                    "end": "$"
+                },
+                {
+                    "name": "comment.block.ics",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "ocaml-code": {
+            "patterns": [
+                {
+                    "name": "keyword.other.ocaml.ics",
+                    "match": "\\b(let|in|match|with|when|fun|function|if|then|else|type|val|module|open|ref|while|do|done|for|to|downto)\\b"
+                },
+                {
+                    "name": "support.function.ocaml.ics",
+                    "match": "\\b(List\\.(length|nth|map|fold_left|fold_right)|Array\\.(length|get|set|make))\\b"
+                }
+            ]
+        },
+        "step-references": {
+            "name": "markup.other.step-reference.ics",
+            "match": "\\b(Step \\d+|step \\d+)\\b"
+        },
+        "operational-steps-block": {
+            "begin": "<<operational steps",
+            "end": "operational steps>>",
+            "name": "meta.operational-steps.ics",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.control.directive.begin.ics"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.control.directive.end.ics"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#step-definition"
+                },
+                {
+                    "include": "#numbers"
+                },
+                {
+                    "include": "#comments"
+                }
+            ]
+        },
+        "step-definition": {
+            "name": "entity.name.function.step-definition.ics",
+            "match": "\\bstep\\s+\\d+\\b"
+        }
+    }
+}
