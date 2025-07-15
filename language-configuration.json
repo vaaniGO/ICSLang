@@ -1,7 +1,7 @@
 {
-    "name": "boop-for-cs-pedagogy",
-    "displayName": "BOOP @shoka",
-    "description": "BOOP! A novel submission system for students of computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.",
+    "name": "ics-language-support",
+    "displayName": "ICS Language Support",
+    "description": "Language support for ICS (Integrated Computer Science) format with LSP and compiler",
     "version": "0.0.1",
     "engines": {
         "vscode": "^1.74.0"
