@@ -4,6 +4,8 @@ import { ICSCompiler } from './compiler';
 import { ICSValidator } from './validator';
 import * as path from 'path';
 import * as fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 let client: LanguageClient;
 
@@ -37,6 +39,12 @@ export function activate(context: vscode.ExtensionContext) {
         new vscode.SemanticTokensLegend(['keyword', 'stepReference'], ['blue', 'purple', 'orange', 'green', 'cyan', 'yellow'])
     );
 
+    // Register folding range provider for collapsible sections
+    const foldingRangeProvider = vscode.languages.registerFoldingRangeProvider(
+        'ics',
+        new ICSFoldingRangeProvider()
+    );
+
     // Register compile command
     const compileCommand = vscode.commands.registerCommand('ics.compile', () => {
         const editor = vscode.window.activeTextEditor;
@@ -49,6 +57,8 @@ export function activate(context: vscode.ExtensionContext) {
         compiler.compile(editor.document);
     });
 
+    const execAsync = promisify(exec);
+
     const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== 'ics') {
@@ -56,47 +66,70 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
+        let originalFirstLine = '';
+        const compilerPath = path.join(__dirname, '/../src/compiler.ts');
+
         try {
             // Read assignment_1.txt content
-            console.log(__dirname);
             const assignmentPath = path.join(__dirname, '/../src/assignment_1.txt');
             const assignmentContent = fs.readFileSync(assignmentPath, 'utf8');
 
             // Read compiler.ts content
-            const compilerPath = path.join(__dirname, '/../src/compiler.ts');
             const compilerContent = fs.readFileSync(compilerPath, 'utf8');
+            const lines = compilerContent.split('\n');
 
-            // Insert assignment content at line 1
-            const modifiedContent = assignmentContent + '\n' + compilerContent;
+            // Store the first line temporarily and remove it
+            originalFirstLine = lines[0];
+            const contentWithoutFirstLine = lines.slice(1).join('\n');
+
+            // Insert assignment content at the beginning
+            const modifiedContent = assignmentContent + '\n' + contentWithoutFirstLine;
             fs.writeFileSync(compilerPath, modifiedContent);
 
-            // Proceed with compilation
+            // Recompile TypeScript
+            await execAsync('npm run compile', { cwd: path.join(__dirname, '/..') });
+
+            // Clear the module cache
+            const compiledPath = path.join(__dirname, '/compiler.js');
+            delete require.cache[require.resolve(compiledPath)];
+
+            // Now import and use
+            const { ICSCompiler } = require(compiledPath);
             const compiler = new ICSCompiler();
             await compiler.compile(editor.document);
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
+            vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR: ${errorMessage}`);
         } finally {
-            // Always clean up: remove the first line from compiler.ts
+            // Cleanup and recompile again
             try {
-                const compilerPath = path.join(__dirname, '/../src/compiler.ts');
                 const currentContent = fs.readFileSync(compilerPath, 'utf8');
                 const lines = currentContent.split('\n');
 
-                // Remove the first line and rejoin
-                const cleanedContent = currentContent;
-                fs.writeFileSync(compilerPath, cleanedContent);
+                const assignmentPath = path.join(__dirname, '/../src/assignment_1.txt');
+                const assignmentContent = fs.readFileSync(assignmentPath, 'utf8');
+                const assignmentLines = assignmentContent.split('\n');
+
+                const remainingLines = lines.slice(assignmentLines.length);
+                const restoredContent = [originalFirstLine, ...remainingLines].join('\n');
+                fs.writeFileSync(compilerPath, restoredContent);
+
+                // Recompile again to restore
+                await execAsync('npm run compile', { cwd: path.join(__dirname, '/..') });
+
+                // Clear cache
+                const compiledPath = path.join(__dirname, '/compiler.js');
+                if (require.cache[require.resolve(compiledPath)]) {
+                    delete require.cache[require.resolve(compiledPath)];
+                }
 
             } catch (cleanupError) {
                 const cleanupErrorMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-                vscode.window.showErrorMessage(`Failed to clean up compiler.ts: ${cleanupErrorMessage}`);
+                vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR: ${cleanupErrorMessage}`);
             }
         }
     });
-
-
-
     // Register validate command
     const validateCommand = vscode.commands.registerCommand('ics.validate', () => {
         const editor = vscode.window.activeTextEditor;
@@ -141,6 +174,7 @@ export function activate(context: vscode.ExtensionContext) {
         hoverProvider,
         definitionProvider,
         semanticTokensProvider,
+        foldingRangeProvider,
         compileCommand,
         a1_compileCommand,
         validateCommand,
@@ -155,6 +189,98 @@ export function deactivate(): Thenable<void> | undefined {
         return undefined;
     }
     return client.stop();
+}
+
+class ICSFoldingRangeProvider implements vscode.FoldingRangeProvider {
+    provideFoldingRanges(document: vscode.TextDocument): vscode.FoldingRange[] {
+        const foldingRanges: vscode.FoldingRange[] = [];
+        const sectionStack: { name: string; startLine: number; kind: vscode.FoldingRangeKind }[] = [];
+
+        // Main sections that should be collapsible
+        const mainSections = ['problem', 'blueprint', 'operational steps', 'ocaml code', 'proof', 'header'];
+
+        for (let i = 0; i < document.lineCount; i++) {
+            const line = document.lineAt(i).text.trim();
+
+            // Check for section start (<<section)
+            const sectionStartMatch = line.match(/^<<(.+)$/);
+            if (sectionStartMatch) {
+                const sectionName = sectionStartMatch[1].trim();
+
+                // Determine if this is a main section or nested section
+                const isMainSection = mainSections.includes(sectionName);
+                const kind = isMainSection ? vscode.FoldingRangeKind.Region : vscode.FoldingRangeKind.Comment;
+
+                sectionStack.push({
+                    name: sectionName,
+                    startLine: i,
+                    kind: kind
+                });
+                continue;
+            }
+
+            // Check for section end (section>>)
+            const sectionEndMatch = line.match(/^(.+)>>$/);
+            if (sectionEndMatch) {
+                const sectionName = sectionEndMatch[1].trim();
+
+                // Find the matching opening section
+                for (let j = sectionStack.length - 1; j >= 0; j--) {
+                    if (sectionStack[j].name === sectionName) {
+                        const section = sectionStack[j];
+
+                        // Only create folding range if there's content between start and end
+                        if (i > section.startLine) {
+                            foldingRanges.push(new vscode.FoldingRange(
+                                section.startLine,
+                                i - 1, // End one line before the closing tag
+                                section.kind
+                            ));
+                        }
+
+                        // Remove this section and all nested sections
+                        sectionStack.splice(j);
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            // Check for problem sections (like "problem 1:")
+            const problemMatch = line.match(/^<<problem\s+\d+:/);
+            if (problemMatch) {
+                sectionStack.push({
+                    name: 'problem',
+                    startLine: i,
+                    kind: vscode.FoldingRangeKind.Region
+                });
+                continue;
+            }
+
+            // Check for problem end
+            if (line === 'problem>>') {
+                for (let j = sectionStack.length - 1; j >= 0; j--) {
+                    if (sectionStack[j].name === 'problem') {
+                        const section = sectionStack[j];
+
+                        if (i > section.startLine) {
+                            foldingRanges.push(new vscode.FoldingRange(
+                                section.startLine,
+                                i - 1,
+                                section.kind
+                            ));
+                        }
+
+                        sectionStack.splice(j);
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+
+        return foldingRanges;
+    }
 }
 
 class ICSSemanticTokensProvider implements vscode.DocumentSemanticTokensProvider {

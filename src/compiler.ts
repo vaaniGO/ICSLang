@@ -1,7 +1,4 @@
-const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
-
-const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
-
+const allowed_flags = "";
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -689,12 +686,13 @@ export class ICSCompiler {
                 stdio: 'pipe',
                 cwd: ppxDir
             });
-            console.log(result);
+            console.log(`eval $(opam env)
+        dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`);
             status = "Verified";
         } catch (err: any) {
             console.error(err.stderr || err.message);
             status = "Failed";
-            vscode.window.showErrorMessage(`${err.message}`);
+            vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR`);
         } finally {
             // Delete the temporary file
             if (fs.existsSync(tempFile)) {

@@ -1,1 +1,1 @@
-const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
+const allowed_flags = "-allow_for_loops";

@@ -24,7 +24,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ICSCompiler = void 0;
-const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
+const allowed_flags = "";
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -629,13 +629,14 @@ class ICSCompiler {
                 stdio: 'pipe',
                 cwd: ppxDir
             });
-            console.log(result);
+            console.log(`eval $(opam env)
+        dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`);
             status = "Verified";
         }
         catch (err) {
             console.error(err.stderr || err.message);
             status = "Failed";
-            vscode.window.showErrorMessage(`${err.message}`);
+            vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR`);
         }
         finally {
             // Delete the temporary file
