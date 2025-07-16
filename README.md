@@ -116,7 +116,7 @@ This section is intended for the user to provide a complete and formal proof tha
  indutive step : ...<br>
 
  proof >>
-</div>
+```
 
 ### Loop invariants would look like:
  
