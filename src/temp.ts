@@ -476,7 +476,7 @@ export class ICSCompiler {
                 }
                 currentSubsection = 'ith-condition';
                 currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            } else if (trimmed.startsWith('after the after the (i+1)th stepth iteration:') || trimmed.startsWith('after the (i+1)th step:')) {
+            } else if (trimmed.startsWith('After the after the (i+1)th iteration:') || trimmed.startsWith('after the (i+1)th step:')) {
                 if (currentSubsection) {
                     section.proofSubsections![currentSubsection] = currentContent.join('\n').trim();
                 }
@@ -712,7 +712,7 @@ export class ICSCompiler {
                 if (section.proofSubsections['i-1th-condition']) {
                     html += `
                 <div class="invariant i-1th-condition">
-                    <span class="invariant-header">After the after the (i+1)th stepth iteration: </span> <br>
+                    <span class="invariant-header">After the after the (i+1)th iteration: </span> <br>
                     ${this.formatProofContent(section.proofSubsections['i-1th-condition'])}
                 </div>`;
                 }

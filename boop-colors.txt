@@ -1,0 +1,5 @@
+blue (BLUEPRINT): #3674B5
+purple (OPERATIONAL STEPS): #7F55B1
+orange (OCAML CODE): #ef7f08
+green (PROOF): #096B68
+main syntax highlighting: ##e6ea92

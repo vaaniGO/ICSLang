@@ -1,18 +1,18 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function (o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
+        desc = { enumerable: true, get: function () { return m[k]; } };
     }
     Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
+}) : (function (o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function (o, v) {
     Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
+}) : function (o, v) {
     o["default"] = v;
 });
 var __importStar = (this && this.__importStar) || function (mod) {
@@ -440,7 +440,7 @@ class A1Compiler {
                 currentSubsection = 'ith-condition';
                 currentContent = [line.substring(line.indexOf(':') + 1).trim()];
             }
-            else if (trimmed.startsWith('after the after the (i+1)th stepth iteration:') || trimmed.startsWith('after the (i+1)th step:')) {
+            else if (trimmed.startsWith('After the after the (i+1)th iteration:') || trimmed.startsWith('after the (i+1)th step:')) {
                 if (currentSubsection) {
                     section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
                 }
@@ -594,10 +594,10 @@ class A1Compiler {
             const sortedSteps = Object.keys(section.subsections)
                 .filter(key => key.startsWith('step-'))
                 .sort((a, b) => {
-                const aNum = parseInt(a.split('-')[1]);
-                const bNum = parseInt(b.split('-')[1]);
-                return aNum - bNum;
-            });
+                    const aNum = parseInt(a.split('-')[1]);
+                    const bNum = parseInt(b.split('-')[1]);
+                    return aNum - bNum;
+                });
             for (const stepKey of sortedSteps) {
                 const stepNum = stepKey.split('-')[1];
                 const stepContent = section.subsections[stepKey];
@@ -691,7 +691,7 @@ class A1Compiler {
                 if (section.proofSubsections['i-1th-condition']) {
                     html += `
                 <div class="invariant i-1th-condition">
-                    <span class="invariant-header">After the after the (i+1)th stepth iteration: </span> <br>
+                    <span class="invariant-header">After the after the (i+1)th iteration: </span> <br>
                     ${this.formatProofContent(section.proofSubsections['i-1th-condition'])}
                 </div>`;
                 }
