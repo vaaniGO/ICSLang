@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { ICSCompiler } from './compiler';
+import { A1Compiler } from './assignment-1';
 import { ICSValidator } from './validator';
 import * as path from 'path';
 
@@ -47,6 +48,19 @@ export function activate(context: vscode.ExtensionContext) {
         const compiler = new ICSCompiler();
         compiler.compile(editor.document);
     });
+
+    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || editor.document.languageId !== 'ics') {
+            vscode.window.showErrorMessage('Please open an ICS file to compile');
+            return;
+        }
+
+        const compiler = new A1Compiler();
+        compiler.compile(editor.document);
+    });
+
+
 
     // Register validate command
     const validateCommand = vscode.commands.registerCommand('ics.validate', () => {

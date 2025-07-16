@@ -27,6 +27,7 @@ exports.ICSCompiler = void 0;
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const child_process_1 = require("child_process");
 class ICSCompiler {
     constructor() {
         const config = vscode.workspace.getConfiguration('ics');
@@ -321,7 +322,7 @@ class ICSCompiler {
                 this.parseOperationalSteps(section, content);
                 break;
             case 'ocaml_code':
-                // OCaml code doesn't need special parsing
+                this.parseOcamlCode(section, content);
                 break;
         }
     }
@@ -498,6 +499,10 @@ class ICSCompiler {
             section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
         }
     }
+    parseOcamlCode(section, content) {
+        // OCaml code doesn't need special parsing, just store the content
+        section.content = content.trim();
+    }
     generateHTML(doc) {
         return `<!DOCTYPE html>
 <html lang="en">
@@ -607,14 +612,46 @@ class ICSCompiler {
         return html;
     }
     generateOCamlCodeHTML(section) {
+        let ocaml_code = section.content.trim();
+        let status = "";
+        console.log("here");
+        const ppxDir = path.resolve(__dirname, '../../ICSLang/ppx_1');
+        const tempDir = ppxDir;
+        if (!fs.existsSync(tempDir))
+            fs.mkdirSync(tempDir, { recursive: true });
+        const tempFile = path.join(ppxDir, `section_${Date.now()}.ml`);
+        fs.writeFileSync(tempFile, ocaml_code);
+        try {
+            const result = (0, child_process_1.execSync)(`eval $(opam env)
+        dune exec ./bin/checker.exe -- ${tempFile}`, {
+                encoding: 'utf-8',
+                stdio: 'pipe',
+                cwd: ppxDir
+            });
+            console.log(result);
+            status = "Verified";
+        }
+        catch (err) {
+            console.error(err.stderr || err.message);
+            status = "Failed";
+            vscode.window.showErrorMessage(`${err.message}`);
+        }
+        finally {
+            // Delete the temporary file
+            if (fs.existsSync(tempFile)) {
+                fs.unlinkSync(tempFile);
+            }
+        }
         return `        <div class="section">
-            <div class="ocaml-code-header section-header">OCAML CODE</div>
-            <div class="ocaml-code">
-                <div class="code sub-section">
-                    <pre class="line-numbers"><code class="language-ocaml">${this.escapeHtml(section.content)}</code></pre>
-                </div>
-            </div>
-        </div>`;
+    <div class="ocaml-code-header section-header">OCAML CODE
+    </div>
+    <div class="ocaml-code">
+    <div class="code-${status}">ICS Check: ${status}</div>
+        <div class="code sub-section">
+            <pre class="line-numbers"><code class="language-ocaml">${this.escapeHtml(section.content)}</code></pre>
+        </div>
+    </div>
+</div>`;
     }
     generateProofHTML(section) {
         let html = `        <div class="section">
@@ -925,7 +962,29 @@ body {
     letter-spacing: -1px;
     border-right: 1px solid #999;
     user-select: none;
-}`;
+}
+.code-Verified {
+    background-color: green;
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    width: 200px;
+    opacity 0.5;
+    margin-left: 10px;
+    text-align: center;
+}
+
+.code-Failed {
+    background-color: red;
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    width: 170px;
+    opacity 0.5;
+    margin-left: 10px
+    text-align: center;
+}
+`;
     }
 }
 exports.ICSCompiler = ICSCompiler;

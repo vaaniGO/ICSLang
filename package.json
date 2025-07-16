@@ -1,9 +1,9 @@
 {
     "name": "boop-for-cs-pedagogy",
-    "displayName": "BOOP @shoka",
-    "description": "Support for a novel CS pedagogical approach",
+    "displayName": "BOOP: Right Code!",
+    "description": "Get it right, then get it written!",
     "publisher": "VaaniGoenka",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.74.0"
@@ -46,6 +46,11 @@
             {
                 "command": "ics.compile",
                 "title": "Compile ICS",
+                "category": "ICS"
+            },
+            {
+                "command": "ics.compile_a1",
+                "title": "Compile for Assignment #1",
                 "category": "ICS"
             }
         ],

@@ -41,6 +41,11 @@
                 "command": "ics.compile",
                 "title": "Compile ICS",
                 "category": "ICS"
+            },
+            {
+                "command": "ics.compile_a1",
+                "title": "Compile for Assignment #1",
+                "category": "ICS"
             }
         ],
         "keybindings": [

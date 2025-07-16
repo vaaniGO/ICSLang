@@ -26,6 +26,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = __importStar(require("vscode"));
 const compiler_1 = require("./compiler");
+const assignment_1_1 = require("./assignment-1");
 const validator_1 = require("./validator");
 let client;
 function activate(context) {
@@ -48,6 +49,15 @@ function activate(context) {
             return;
         }
         const compiler = new compiler_1.ICSCompiler();
+        compiler.compile(editor.document);
+    });
+    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || editor.document.languageId !== 'ics') {
+            vscode.window.showErrorMessage('Please open an ICS file to compile');
+            return;
+        }
+        const compiler = new assignment_1_1.A1Compiler();
         compiler.compile(editor.document);
     });
     // Register validate command

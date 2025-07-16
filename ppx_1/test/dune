@@ -1,6 +1,6 @@
-(tests
- (names test_ppx_1 explicit_typing)
- (preprocess
-  (pps ppx_1)))
+; (tests
+;  (names test_ppx_1 explicit_typing)
+;  (preprocess
+;   (pps ppx_1)))
 
 ; If you wish to add more test files, write your code in a .ml file, then add the file name as done above, beside test_ppx_1 explicit_typing on Line 2

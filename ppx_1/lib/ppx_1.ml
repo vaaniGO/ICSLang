@@ -39,10 +39,7 @@ let all_fun_args_are_annotated entry_expr =
     *)
 let banned_always_functions : StringSet.t =
   StringSet.of_list [
-    "print_char"; "print_string"; "print_bytes"; "print_int"; "print_float"; "print_endline"; "print_newline";
-    "read_line"; "read_int"; "read_float"; "Scanf.scanf"; "Printf.printf"; "Printf.eprintf"; "Printf.sprintf";
-    "abs"; "max_int"; "min_int"; "fst"; "snd"; "ignore"; "exit"; "truncate"; "Char.code"; "Char.chr";
-    "string_of_int"; "string_of_float"; "int_of_string"; "float_of_string"; "bool_of_string"; "string_of_bool";
+    "abs"; "ignore"; "exit"; "truncate"; "Char.code"; "Char.chr";
     "List.map"; "List.mapi"; "List.map2"; "List.fold_left"; "List.fold_right"; "List.iter"; "List.iteri";
     "List.filter"; "List.find"; "List.find_opt"; "List.sort"; "List.stable_sort"; "List.rev_map"; "List.assoc";
     "List.mem"; "List.memq"; "List.combine"; "List.split"; "List.for_all"; "List.exists"; "List.partition";
@@ -127,15 +124,15 @@ let ppx_enforcer_rules =
          will now correctly only fire on *nested* lambdas. *)
       (match expr.pexp_desc with
       | Pexp_for (_, _, _, _, _) when not !allow_for_loops ->
-          Location.raise_errorf ~loc:expr.pexp_loc "For-loops are not permitted (-allow_for_loops is false)."
+          Location.raise_errorf ~loc:expr.pexp_loc "For-loops are not permitted."
       | Pexp_while (_, _) when not !allow_while_loops ->
-          Location.raise_errorf ~loc:expr.pexp_loc "While-loops are not permitted (-allow_while_loops is false)."
+          Location.raise_errorf ~loc:expr.pexp_loc "While-loops are not permitted."
       | Pexp_fun (_, _, _, _) when not !allow_lambdas ->
-          Location.raise_errorf ~loc:expr.pexp_loc "Lambda functions (fun keyword in expression context) are not permitted (-allow_lambdas is false)."
+          Location.raise_errorf ~loc:expr.pexp_loc "Lambda functions (fun keyword in expression context) are not permitted."
       | Pexp_setfield (_, _, _) when not !allow_mutability ->
-          Location.raise_errorf ~loc:expr.pexp_loc "Record field mutation (record.field <- value) is not permitted (-allow_mutability is false)."
+          Location.raise_errorf ~loc:expr.pexp_loc "Record field mutation (record.field <- value) is not permitted."
       | Pexp_setinstvar (_, _) when not !allow_mutability ->
-    Location.raise_errorf ~loc:expr.pexp_loc "Object instance variable mutation (obj#field <- value) is not permitted (-allow_mutability is false)."
+    Location.raise_errorf ~loc:expr.pexp_loc "Object instance variable mutation (obj#field <- value) is not permitted."
       | Pexp_ifthenelse (_, _, _) ->
           Location.raise_errorf ~loc:expr.pexp_loc "If-then-else statements are not permitted."
       | Pexp_function _ ->

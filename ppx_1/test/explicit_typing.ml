@@ -10,6 +10,16 @@ let h (x : int) = x * 2 *)
 (* This should pass — fully typed *)
 (* let f (x : int) : int = x + 1;; *)
 
-let f (x : int) = x * 2;;
+(* let f (x : int) = x * 2;;
 
-print_int(f 5);;
+print_int(f 5);; *)
+
+let x = 5 in
+for i = 1 to x do
+  (print_int(i))
+done;;
+
+(* This should pass — fully typed *)
+(* let f (x : int) : int = x + 1;; *)
+
+(* let f (x : int) = x * 2;; *)
