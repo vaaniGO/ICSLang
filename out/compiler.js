@@ -24,6 +24,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ICSCompiler = void 0;
+const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -623,7 +624,7 @@ class ICSCompiler {
         fs.writeFileSync(tempFile, ocaml_code);
         try {
             const result = (0, child_process_1.execSync)(`eval $(opam env)
-        dune exec ./bin/checker.exe -- ${tempFile}`, {
+        dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`, {
                 encoding: 'utf-8',
                 stdio: 'pipe',
                 cwd: ppxDir

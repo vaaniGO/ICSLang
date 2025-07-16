@@ -26,8 +26,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = __importStar(require("vscode"));
 const compiler_1 = require("./compiler");
-const assignment_1_1 = require("./assignment-1");
 const validator_1 = require("./validator");
+const path = __importStar(require("path"));
+const fs = __importStar(require("fs"));
 let client;
 function activate(context) {
     console.log('ICS Language Support extension is now active!');
@@ -51,14 +52,46 @@ function activate(context) {
         const compiler = new compiler_1.ICSCompiler();
         compiler.compile(editor.document);
     });
-    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', () => {
+    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== 'ics') {
             vscode.window.showErrorMessage('Please open an ICS file to compile');
             return;
         }
-        const compiler = new assignment_1_1.A1Compiler();
-        compiler.compile(editor.document);
+        try {
+            // Read assignment_1.txt content
+            console.log(__dirname);
+            const assignmentPath = path.join(__dirname, '/../src/assignment_1.txt');
+            const assignmentContent = fs.readFileSync(assignmentPath, 'utf8');
+            // Read compiler.ts content
+            const compilerPath = path.join(__dirname, '/../src/compiler.ts');
+            const compilerContent = fs.readFileSync(compilerPath, 'utf8');
+            // Insert assignment content at line 1
+            const modifiedContent = assignmentContent + '\n' + compilerContent;
+            fs.writeFileSync(compilerPath, modifiedContent);
+            // Proceed with compilation
+            const compiler = new compiler_1.ICSCompiler();
+            await compiler.compile(editor.document);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
+        }
+        finally {
+            // Always clean up: remove the first line from compiler.ts
+            try {
+                const compilerPath = path.join(__dirname, '/../src/compiler.ts');
+                const currentContent = fs.readFileSync(compilerPath, 'utf8');
+                const lines = currentContent.split('\n');
+                // Remove the first line and rejoin
+                const cleanedContent = currentContent;
+                fs.writeFileSync(compilerPath, cleanedContent);
+            }
+            catch (cleanupError) {
+                const cleanupErrorMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+                vscode.window.showErrorMessage(`Failed to clean up compiler.ts: ${cleanupErrorMessage}`);
+            }
+        }
     });
     // Register validate command
     const validateCommand = vscode.commands.registerCommand('ics.validate', () => {
@@ -92,7 +125,7 @@ function activate(context) {
     const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(event => {
         validateDocument(event.document);
     });
-    context.subscriptions.push(completionProvider, hoverProvider, definitionProvider, semanticTokensProvider, compileCommand, validateCommand, diagnosticCollection, onDidChangeActiveTextEditor, onDidChangeTextDocument);
+    context.subscriptions.push(completionProvider, hoverProvider, definitionProvider, semanticTokensProvider, compileCommand, a1_compileCommand, validateCommand, diagnosticCollection, onDidChangeActiveTextEditor, onDidChangeTextDocument);
 }
 exports.activate = activate;
 function deactivate() {

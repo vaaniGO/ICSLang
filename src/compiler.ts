@@ -1,3 +1,8 @@
+const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
+
+const allowed_flags = "-allow_for_loops -allow_while_loops -allow_lambdas -allow_mutability";
+
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -679,7 +684,7 @@ export class ICSCompiler {
 
         try {
             const result = execSync(`eval $(opam env)
-        dune exec ./bin/checker.exe -- ${tempFile}`, {
+        dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`, {
                 encoding: 'utf-8',
                 stdio: 'pipe',
                 cwd: ppxDir

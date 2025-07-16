@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { ICSCompiler } from './compiler';
-import { A1Compiler } from './assignment-1';
 import { ICSValidator } from './validator';
 import * as path from 'path';
+import * as fs from 'fs';
 
 let client: LanguageClient;
 
@@ -49,15 +49,50 @@ export function activate(context: vscode.ExtensionContext) {
         compiler.compile(editor.document);
     });
 
-    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', () => {
+    const a1_compileCommand = vscode.commands.registerCommand('ics.compile_a1', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== 'ics') {
             vscode.window.showErrorMessage('Please open an ICS file to compile');
             return;
         }
 
-        const compiler = new A1Compiler();
-        compiler.compile(editor.document);
+        try {
+            // Read assignment_1.txt content
+            console.log(__dirname);
+            const assignmentPath = path.join(__dirname, '/../src/assignment_1.txt');
+            const assignmentContent = fs.readFileSync(assignmentPath, 'utf8');
+
+            // Read compiler.ts content
+            const compilerPath = path.join(__dirname, '/../src/compiler.ts');
+            const compilerContent = fs.readFileSync(compilerPath, 'utf8');
+
+            // Insert assignment content at line 1
+            const modifiedContent = assignmentContent + '\n' + compilerContent;
+            fs.writeFileSync(compilerPath, modifiedContent);
+
+            // Proceed with compilation
+            const compiler = new ICSCompiler();
+            await compiler.compile(editor.document);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
+        } finally {
+            // Always clean up: remove the first line from compiler.ts
+            try {
+                const compilerPath = path.join(__dirname, '/../src/compiler.ts');
+                const currentContent = fs.readFileSync(compilerPath, 'utf8');
+                const lines = currentContent.split('\n');
+
+                // Remove the first line and rejoin
+                const cleanedContent = currentContent;
+                fs.writeFileSync(compilerPath, cleanedContent);
+
+            } catch (cleanupError) {
+                const cleanupErrorMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+                vscode.window.showErrorMessage(`Failed to clean up compiler.ts: ${cleanupErrorMessage}`);
+            }
+        }
     });
 
 
@@ -107,6 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
         definitionProvider,
         semanticTokensProvider,
         compileCommand,
+        a1_compileCommand,
         validateCommand,
         diagnosticCollection,
         onDidChangeActiveTextEditor,
