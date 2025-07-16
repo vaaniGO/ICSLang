@@ -2,6 +2,7 @@
 <div align="center">
   <img src="https://github.com/vaaniGO/ICSLang/blob/main/icon.png" alt="BOOP" width="300px"/>
 </div>
+
 # BOOP!: How to Right Code.
 ### A novel problem-solving tool for students of introductory computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
 ## Language Syntax
