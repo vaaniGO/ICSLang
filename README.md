@@ -2,7 +2,7 @@
 <div align="center">
   <img src="https://github.com/vaaniGO/ICSLang/blob/main/icon.png" alt="BOOP" width="300px"/>
 </div>
-# <span style="color: #3674B5;">B</span><span style="color: #7F55B1;">O</span><span style="color: #ef7f08;">O</span><span style="color: #096B68;">P</span>: How to Right Code!
+# BOOP!: How to Right Code.
 ### A novel problem-solving tool for students of introductory computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
 ## Language Syntax
 
@@ -19,32 +19,32 @@ The ICS language syntax is designed to be simple and intuitive, allowing users t
 ## Header Block
 
 Every submission must inlcude a header in the following format. All fields of the header are mandatory.
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">header</span> 
+ 
+<< header
 
-<span style="color: aqua;">assignment</span>: Assignment 5: Sorting & Searching <br>
-<span style="color: aqua;">student</span>: Vaani Goenka<br>
-<span style="color: aqua;">date</span>: 15th June 2025<br>
-<span style="color: aqua;">collaborators</span>: None
+ assignment : Assignment 5: Sorting & Searching <br>
+ student : Vaani Goenka<br>
+ date : 15th June 2025<br>
+ collaborators : None
 
-<span style="color: #e6ea92;">header</span>>>
+ header >>
 </div>
 
 
-## Syntax in action: <span style="color: #3674B5;">B</span><span style="color: #7F55B1;">O</span><span style="color: #ef7f08;">O</span><span style="color: #096B68;">P</span>!
+## Syntax in action: <span style="color: #3674B5;">B <span style="color: #7F55B1;">O <span style="color: #ef7f08;">O <span style="color: #096B68;">P !
 
 ## 1. Problem Block
 
 
-<div style="text-align: left; margin-left: 5%; ">
+```
 
-<<<span style="color: aqua;">problem</span> <span style="color: orange;">1</span>: "Title of the Problem"
+<< problem 1 : "Title of the Problem"
 
     ... (all other BOOP blocks go here)
 
-<span style="color: aqua;">problem</span>>>
+ problem >>
 
-</div>
+```
 
 > - Every problem must be enclosed within a problem block. Failure to do so might result in a blank submission despite other BOOP tags.
 > - 'problem' must be followed by a number, a colon and the title of the problem in double quotes as shown above.
@@ -54,36 +54,37 @@ Every submission must inlcude a header in the following format. All fields of th
 This main-section is intended for the user to lay out the correctness criteria of their program i.e. what are the characeteristics (formally) of the input and output that must hold true for the program to be considered correct. 
 
 
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">blueprint</span> 
+```
+<< blueprint  
 
-    <span style="color: aqua;">requires</span>: [conditions that must hold before execution] \
-    <span style="color: aqua;">ensures</span>: [conditions that must hold after execution]
+     requires : [conditions that must hold before execution] \
+     ensures : [conditions that must hold after execution]
 
-<span style="color: #e6ea92;">blueprint</span>>>
-</div>
-
+ blueprint >>
+```
 ## 3. Operational Steps
 This section is for the user to explain their algorithm (process) for solving the given problem as if to a human.
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">operational steps</span>
+ 
+```
+<< operational steps 
 
-    <span style="color: aqua;">step 1</span>: Considering the base case n=0, we can think of the problem as one....\
-    <span style="color: aqua;">step n</span>: We eventually reach n=0 because we are subtracting at every step so the base case....
+     step 1 : Considering the base case n=0, we can think of the problem as one....\
+     step n : We eventually reach n=0 because we are subtracting at every step so the base case....
 
-<span style="color: #e6ea92;">operational steps</span>>>
-</div>
+ operational steps >>
+```
 
 
 ## 4. Ocaml Code
 Write your standard ICS-friendly OCaml code here. It will be validated by the ICS OCaml validator.
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">ocaml code</span>
+ 
+ ```
+<< ocaml code 
 
     (* Write your code in regular OCaml syntax, following ICS guidelines *) 
 
-<span style="color: #e6ea92;">ocaml code</span>>>
-</div>
+ ocaml code >>
+```
 
 The status of your code is then reflected in the compiled version as so:
 
@@ -106,29 +107,30 @@ Errors in your code will appear in a pop-up during compilation, but will not sto
 ## 5. 📖 Proof
 This section is intended for the user to provide a complete and formal proof that their program satisfies the given correctness criteria in the blueprint.
 ### Proof by induction would look like:
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">proof</span> <br>
-<<<span style="color: #e6ea92;">induction</span> <br> <br>
-<span style="color: aqua;">base case</span>: ... <br> <br>
-<span style="color: aqua;">induction hypothesis</span>: ... <br><br>
-<span style="color: aqua;">indutive step</span>: ... <br> <br>
-<span style="color: #e6ea92;">induction</span>>><br>
+ 
+ ```
+<< proof  
+<< induction  
+ base case : ... 
+ induction hypothesis : ... 
+ indutive step : ...<br>
 
-<span style="color: #e6ea92;">proof</span>>>
+ proof >>
 </div>
 
 ### Loop invariants would look like:
-<div style="text-align: left; margin-left: 5%; ">
-<<<span style="color: #e6ea92;">proof</span> <br>
-<<<span style="color: #e6ea92;">invariant</span> <br> <br>
-<span style="color: aqua;">pre-condition</span>: ... <br> <br>
-<span style="color: aqua;">after the ith step</span>: ... <br><br>
-<span style="color: aqua;">after the (i+1)th step</span>: ... <br> <br>
-<span style="color: aqua;">post-condition</span>: ... <br> <br>
-<span style="color: #e6ea92;">invariant</span>>><br>
+ 
+ ```
+<< proof 
+<< invariant 
+ pre-condition : ... 
+ after the ith step : ... 
+ after the (i+1)th step : ...
+ post-condition : ...
+ invariant >>
 
-<span style="color: #e6ea92;">proof</span>>>
-</div>
+ proof >>
+```
 
 
 ## Usage:
