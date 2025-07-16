@@ -82,11 +82,12 @@ Write your standard ICS-friendly OCaml code here. It will be validated by the IC
 </div>
 
 The status of your code is then reflected in the compiled version as so: 
-![OCaml Code Status](https://github.com/vaaniGO/Media/blob/main/compiled_status.png)
+![OCaml Code Status](https://github.com/vaaniGO/ICSLang/blob/main/compiled_status.png){:width="300px"}
 
 Errors in your code will appear in a pop-up during compilation, but will not stop compilation. Your submission will be compiled and your pdf will have your code marked as invalid accordinging to ICS syntax..
-![Ocaml Error Message](https://github.com/vaaniGO/Media/blob/main/error_msg.png)
-![Validation Error in PDF](https://github.com/vaaniGO/Media/blob/main/validation_failed.png)
+![Ocaml Error Message](https://github.com/vaaniGO/ICSLang/blob/main/error_msg.png)
+![OCaml Code Status](https://github.com/vaaniGO/ICSLang/blob/main/validation_failed.png){:width="300px"}
+
 
 ## 5. 📖 Proof
 This section is intended for the user to provide a complete and formal proof that their program satisfies the given correctness criteria in the blueprint.
