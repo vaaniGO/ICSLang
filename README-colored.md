@@ -1,4 +1,3 @@
-
 <div align="center">
   <img src="
   https://github.com/vaaniGO/ICSLang/blob/main/icon.png" alt="BOOP" width="300px"/>
@@ -103,6 +102,7 @@ Errors in your code will appear in a pop-up during compilation, but will not sto
 <div align="center">
   <img src="https://github.com/vaaniGO/ICSLang/blob/main/validation_failed.png" alt="Validation Error in PDF" width="300px"/>
 </div>
+
 
 ## 5. 📖 Proof
 This section is intended for the user to provide a complete and formal proof that their program satisfies the given correctness criteria in the blueprint.
