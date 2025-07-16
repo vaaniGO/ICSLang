@@ -1,5 +1,6 @@
 ![Alt Text](https://github.com/vaaniGO/ICSLang/blob/main/icon.png)
-### BOOP! A novel submission system for students of computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
+### BOOP! How to right code.
+### A novel submission system for students of computer science. This is designed to promote structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
 # 📝 Language Syntax
 
 The ICS language syntax is designed to be simple and intuitive, allowing users to write structured documents easily. Each section is enclosed using double angle brackets (`<< >>`) and follows a defined tag-based hierarchy.
@@ -93,6 +94,11 @@ proof>>
 5. Select ICS: Compile ICS 
 
 ## Information
+
+### Acknowledgements
+Thank you to [Prof Aalok D. Thakkar](https://aalok-thakkar.github.io) for his guidance and mentorship. 
+
+### Version Info
 Developer and Maintainer: Vaani Goenka \
 @ email: vaani.goenka_ug2024@ashoka.edu.in \
 Changelog \
