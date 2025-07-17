@@ -563,7 +563,6 @@ export class ICSCompiler {
         <div class="student-name">${doc.studentName}</div>
         <div class="date">${doc.date}</div>
         <div class="collaborators">Collaborators: ${doc.collaborators}</div>
-        <div class="verified">Formally verified? ${doc.verified}</div>
     </div>
 
     <div class="document-content">

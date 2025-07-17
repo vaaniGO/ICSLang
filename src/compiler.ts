@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import * as puppeteer from 'puppeteer';
 
 export interface ICSSection {
     type: 'blueprint' | 'operational_steps' | 'ocaml_code' | 'proof';
@@ -65,6 +66,8 @@ export class ICSCompiler {
     }
 
     async compile(document: vscode.TextDocument) {
+        let browser: puppeteer.Browser | null = null;
+
         try {
             const parsed = this.parseDocument(document);
             if (!parsed) {
@@ -73,28 +76,59 @@ export class ICSCompiler {
             }
 
             const html = this.generateHTML(parsed);
-            const outputFile = this.getOutputPath(document.fileName);
+            const css = this.generateCSS();
+
+            // Combine HTML with inline CSS - completely in memory
+            const htmlWithCSS = html.replace('</head>', `<style>${css}</style></head>`);
+
+            // Generate PDF output path
+            const outputFile = this.getOutputPath(document.fileName).replace(/\.html$/, '.pdf');
+            const outputDir = path.dirname(outputFile);
 
             // Ensure output directory exists
-            const outputDir = path.dirname(outputFile);
             if (!fs.existsSync(outputDir)) {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
 
-            fs.writeFileSync(outputFile, html);
+            // Launch Puppeteer and generate PDF directly from HTML string
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
 
-            // Generate CSS file
-            const cssFile = path.join(outputDir, 'boop.css');
-            fs.writeFileSync(cssFile, this.generateCSS());
+            const page = await browser.newPage();
+
+            // Set content directly from HTML string - no temporary files
+            await page.setContent(htmlWithCSS, {
+                waitUntil: 'networkidle0'
+            });
+
+            // Generate PDF directly to final location
+            await page.pdf({
+                path: outputFile,
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '20px',
+                    bottom: '20px',
+                    left: '20px',
+                    right: '20px'
+                }
+            });
 
             vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
 
-            // Open the compiled HTML file
+            // Open the PDF file
             const uri = vscode.Uri.file(outputFile);
             vscode.env.openExternal(uri);
 
         } catch (error) {
             vscode.window.showErrorMessage(`Compilation failed: ${error}`);
+        } finally {
+            // Close browser - no temporary files to clean up
+            if (browser) {
+                await browser.close();
+            }
         }
     }
 
@@ -571,7 +605,6 @@ export class ICSCompiler {
         <div class="student-name">${doc.studentName}</div>
         <div class="date">${doc.date}</div>
         <div class="collaborators">Collaborators: ${doc.collaborators}</div>
-        <div class="verified">Formally verified? ${doc.verified}</div>
     </div>
 
     <div class="document-content">
@@ -991,7 +1024,7 @@ body {
 }
 
 .code {
-    background: transparent;
+    background: black;
     color: inherit;
     padding: 15px;
     border-radius: 5px;
@@ -1044,6 +1077,7 @@ body {
     opacity 0.5;
     margin-left: 10px;
     text-align: center;
+    margin-bottom: 5px;
 }
 
 .code-Failed {
@@ -1055,6 +1089,7 @@ body {
     opacity 0.5;
     margin-left: 10px
     text-align: center;
+    margin-bottom: 5px;
 }
 `;
     }

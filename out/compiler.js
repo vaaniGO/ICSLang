@@ -1,18 +1,18 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function (o, m, k, k2) {
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function () { return m[k]; } };
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
     Object.defineProperty(o, k2, desc);
-}) : (function (o, m, k, k2) {
+}) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function (o, v) {
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
     Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function (o, v) {
+}) : function(o, v) {
     o["default"] = v;
 });
 var __importStar = (this && this.__importStar) || function (mod) {
@@ -29,6 +29,7 @@ const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
+const puppeteer = __importStar(require("puppeteer"));
 class ICSCompiler {
     constructor() {
         const config = vscode.workspace.getConfiguration('ics');
@@ -62,6 +63,7 @@ class ICSCompiler {
         return path.join(resolvedOutputPath, `${baseName}.html`);
     }
     async compile(document) {
+        let browser = null;
         try {
             const parsed = this.parseDocument(document);
             if (!parsed) {
@@ -69,23 +71,51 @@ class ICSCompiler {
                 return;
             }
             const html = this.generateHTML(parsed);
-            const outputFile = this.getOutputPath(document.fileName);
-            // Ensure output directory exists
+            const css = this.generateCSS();
+            // Combine HTML with inline CSS - completely in memory
+            const htmlWithCSS = html.replace('</head>', `<style>${css}</style></head>`);
+            // Generate PDF output path
+            const outputFile = this.getOutputPath(document.fileName).replace(/\.html$/, '.pdf');
             const outputDir = path.dirname(outputFile);
+            // Ensure output directory exists
             if (!fs.existsSync(outputDir)) {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
-            fs.writeFileSync(outputFile, html);
-            // Generate CSS file
-            const cssFile = path.join(outputDir, 'boop.css');
-            fs.writeFileSync(cssFile, this.generateCSS());
+            // Launch Puppeteer and generate PDF directly from HTML string
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            // Set content directly from HTML string - no temporary files
+            await page.setContent(htmlWithCSS, {
+                waitUntil: 'networkidle0'
+            });
+            // Generate PDF directly to final location
+            await page.pdf({
+                path: outputFile,
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '20px',
+                    bottom: '20px',
+                    left: '20px',
+                    right: '20px'
+                }
+            });
             vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
-            // Open the compiled HTML file
+            // Open the PDF file
             const uri = vscode.Uri.file(outputFile);
             vscode.env.openExternal(uri);
         }
         catch (error) {
             vscode.window.showErrorMessage(`Compilation failed: ${error}`);
+        }
+        finally {
+            // Close browser - no temporary files to clean up
+            if (browser) {
+                await browser.close();
+            }
         }
     }
     parseDocument(document) {
@@ -528,7 +558,6 @@ class ICSCompiler {
         <div class="student-name">${doc.studentName}</div>
         <div class="date">${doc.date}</div>
         <div class="collaborators">Collaborators: ${doc.collaborators}</div>
-        <div class="verified">Formally verified? ${doc.verified}</div>
     </div>
 
     <div class="document-content">
@@ -593,10 +622,10 @@ class ICSCompiler {
             const sortedSteps = Object.keys(section.subsections)
                 .filter(key => key.startsWith('step-'))
                 .sort((a, b) => {
-                    const aNum = parseInt(a.split('-')[1]);
-                    const bNum = parseInt(b.split('-')[1]);
-                    return aNum - bNum;
-                });
+                const aNum = parseInt(a.split('-')[1]);
+                const bNum = parseInt(b.split('-')[1]);
+                return aNum - bNum;
+            });
             for (const stepKey of sortedSteps) {
                 const stepNum = stepKey.split('-')[1];
                 const stepContent = section.subsections[stepKey];
@@ -921,7 +950,7 @@ body {
 }
 
 .code {
-    background: transparent;
+    background: black;
     color: inherit;
     padding: 15px;
     border-radius: 5px;
@@ -974,6 +1003,7 @@ body {
     opacity 0.5;
     margin-left: 10px;
     text-align: center;
+    margin-bottom: 5px;
 }
 
 .code-Failed {
@@ -985,6 +1015,7 @@ body {
     opacity 0.5;
     margin-left: 10px
     text-align: center;
+    margin-bottom: 5px;
 }
 `;
     }

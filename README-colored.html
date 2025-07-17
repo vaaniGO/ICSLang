@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>README-colored.md</title>
+	<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+	<style>
+		/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+		/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+		* {
+			background-color: #1b1b1b;
+			color: white;
+			font-size: 1rem;
+		}
+
+		body {
+			font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+			font-size: var(--vscode-markdown-font-size, 14px);
+			padding: 0 26px;
+			line-height: var(--vscode-markdown-line-height, 22px);
+			word-wrap: break-word;
+		}
+
+		#code-csp-warning {
+			position: fixed;
+			top: 0;
+			right: 0;
+			color: white;
+			margin: 16px;
+			text-align: center;
+			font-size: 12px;
+			font-family: sans-serif;
+			background-color: #444444;
+			cursor: pointer;
+			padding: 6px;
+			box-shadow: 1px 1px 1px rgba(0, 0, 0, .25);
+		}
+
+		#code-csp-warning:hover {
+			text-decoration: none;
+			background-color: #007acc;
+			box-shadow: 2px 2px 2px rgba(0, 0, 0, .25);
+		}
+
+		body.scrollBeyondLastLine {
+			margin-bottom: calc(100vh - 22px);
+		}
+
+		body.showEditorSelection .code-line {
+			position: relative;
+		}
+
+		body.showEditorSelection .code-active-line:before,
+		body.showEditorSelection .code-line:hover:before {
+			content: "";
+			display: block;
+			position: absolute;
+			top: 0;
+			left: -12px;
+			height: 100%;
+		}
+
+		body.showEditorSelection li.code-active-line:before,
+		body.showEditorSelection li.code-line:hover:before {
+			left: -30px;
+		}
+
+		.vscode-light.showEditorSelection .code-active-line:before {
+			border-left: 3px solid rgba(0, 0, 0, 0.15);
+		}
+
+		.vscode-light.showEditorSelection .code-line:hover:before {
+			border-left: 3px solid rgba(0, 0, 0, 0.40);
+		}
+
+		.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+			border-left: none;
+		}
+
+		.vscode-dark.showEditorSelection .code-active-line:before {
+			border-left: 3px solid rgba(255, 255, 255, 0.4);
+		}
+
+		.vscode-dark.showEditorSelection .code-line:hover:before {
+			border-left: 3px solid rgba(255, 255, 255, 0.60);
+		}
+
+		.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+			border-left: none;
+		}
+
+		.vscode-high-contrast.showEditorSelection .code-active-line:before {
+			border-left: 3px solid rgba(255, 160, 0, 0.7);
+		}
+
+		.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+			border-left: 3px solid rgba(255, 160, 0, 1);
+		}
+
+		.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+			border-left: none;
+		}
+
+		img {
+			max-width: 100%;
+			max-height: 100%;
+		}
+
+		a {
+			text-decoration: none;
+		}
+
+		a:hover {
+			text-decoration: underline;
+		}
+
+		a:focus,
+		input:focus,
+		select:focus,
+		textarea:focus {
+			outline: 1px solid -webkit-focus-ring-color;
+			outline-offset: -1px;
+		}
+
+		hr {
+			border: 0;
+			height: 2px;
+			border-bottom: 2px solid;
+		}
+
+		h1 {
+			padding-bottom: 0.3em;
+			line-height: 1.2;
+			border-bottom-width: 1px;
+			border-bottom-style: solid;
+		}
+
+		h1,
+		h2,
+		h3 {
+			font-weight: normal;
+		}
+
+		table {
+			border-collapse: collapse;
+		}
+
+		table>thead>tr>th {
+			text-align: left;
+			border-bottom: 1px solid;
+		}
+
+		table>thead>tr>th,
+		table>thead>tr>td,
+		table>tbody>tr>th,
+		table>tbody>tr>td {
+			padding: 5px 10px;
+		}
+
+		table>tbody>tr+tr>td {
+			border-top: 1px solid;
+		}
+
+		blockquote {
+			margin: 0 7px 0 5px;
+			padding: 0 16px 0 10px;
+			border-left-width: 5px;
+			border-left-style: solid;
+		}
+
+		code {
+			font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+			font-size: 1em;
+			line-height: 1.357em;
+		}
+
+		body.wordWrap pre {
+			white-space: pre-wrap;
+		}
+
+		pre:not(.hljs),
+		pre.hljs code>div {
+			padding: 16px;
+			border-radius: 3px;
+			overflow: auto;
+		}
+
+		pre code {
+			color: var(--vscode-editor-foreground);
+			tab-size: 4;
+		}
+
+		/** Theming */
+
+		.vscode-light pre {
+			background-color: rgba(220, 220, 220, 0.4);
+		}
+
+		.vscode-dark pre {
+			background-color: rgba(10, 10, 10, 0.4);
+		}
+
+		.vscode-high-contrast pre {
+			background-color: rgb(0, 0, 0);
+		}
+
+		.vscode-high-contrast h1 {
+			border-color: rgb(0, 0, 0);
+		}
+
+		.vscode-light table>thead>tr>th {
+			border-color: rgba(0, 0, 0, 0.69);
+		}
+
+		.vscode-dark table>thead>tr>th {
+			border-color: rgba(255, 255, 255, 0.69);
+		}
+
+		.vscode-light h1,
+		.vscode-light hr,
+		.vscode-light table>tbody>tr+tr>td {
+			border-color: rgba(0, 0, 0, 0.18);
+		}
+
+		.vscode-dark h1,
+		.vscode-dark hr,
+		.vscode-dark table>tbody>tr+tr>td {
+			border-color: rgba(255, 255, 255, 0.18);
+		}
+	</style>
+
+	<style>
+		/* Tomorrow Theme */
+		/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+		/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+		/* Tomorrow Comment */
+		.hljs-comment,
+		.hljs-quote {
+			color: #8e908c;
+		}
+
+		/* Tomorrow Red */
+		.hljs-variable,
+		.hljs-template-variable,
+		.hljs-tag,
+		.hljs-name,
+		.hljs-selector-id,
+		.hljs-selector-class,
+		.hljs-regexp,
+		.hljs-deletion {
+			color: #c82829;
+		}
+
+		/* Tomorrow Orange */
+		.hljs-number,
+		.hljs-built_in,
+		.hljs-builtin-name,
+		.hljs-literal,
+		.hljs-type,
+		.hljs-params,
+		.hljs-meta,
+		.hljs-link {
+			color: #f5871f;
+		}
+
+		/* Tomorrow Yellow */
+		.hljs-attribute {
+			color: #eab700;
+		}
+
+		/* Tomorrow Green */
+		.hljs-string,
+		.hljs-symbol,
+		.hljs-bullet,
+		.hljs-addition {
+			color: #718c00;
+		}
+
+		/* Tomorrow Blue */
+		.hljs-title,
+		.hljs-section {
+			color: #4271ae;
+		}
+
+		/* Tomorrow Purple */
+		.hljs-keyword,
+		.hljs-selector-tag {
+			color: #8959a8;
+		}
+
+		.hljs {
+			display: block;
+			overflow-x: auto;
+			color: #4d4d4c;
+			padding: 0.5em;
+		}
+
+		.hljs-emphasis {
+			font-style: italic;
+		}
+
+		.hljs-strong {
+			font-weight: bold;
+		}
+	</style>
+
+	<style>
+		/*
+ * Markdown PDF CSS
+ */
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+			padding: 0 12px;
+		}
+
+		pre {
+			background-color: #f8f8f8;
+			border: 1px solid #cccccc;
+			border-radius: 3px;
+			overflow-x: auto;
+			white-space: pre-wrap;
+			overflow-wrap: break-word;
+		}
+
+		pre:not(.hljs) {
+			padding: 23px;
+			line-height: 19px;
+		}
+
+		blockquote {
+			background: rgba(127, 127, 127, 0.1);
+			border-color: rgba(0, 122, 204, 0.5);
+		}
+
+		.emoji {
+			height: 1.4em;
+		}
+
+		code {
+			font-size: 14px;
+			line-height: 19px;
+		}
+
+		/* for inline code */
+		:not(pre):not(.hljs)>code {
+			color: #C9AE75;
+			/* Change the old color so it seems less like an error */
+			font-size: inherit;
+		}
+
+		/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+		.page {
+			page-break-after: always;
+		}
+	</style>
+
+	<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+
+<body>
+	<script>
+		mermaid.initialize({
+			startOnLoad: true,
+			theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+				? 'dark'
+				: 'default'
+		});
+	</script>
+	<div align="center">
+		<img src="
+  icon.png" alt="BOOP" width="300px" />
+	</div>
+	<div style="font-size: 2rem;">
+		<span style="color: #3674B5; font-size: 2rem;">B</span><span
+			style="color: #7F55B1; font-size: 2rem;">O</span><span
+			style="color: #ef7f08; font-size: 2rem;">O</span><span style="color: #096B68; font-size: 2rem;">P</span>:
+		How to Right Code!
+	</div> <br>
+	A novel problem-solving tool for students of introductory computer science. This is designed to promote
+	structured thinking, strong design choices, self-reflection and a well-probed problem-solving stream.
+	<h2>Language Syntax</h2>
+	<p>The ICS language syntax is designed to be simple and intuitive, allowing users to write structured documents
+		easily. There are only 5 syntax features to know:</p>
+	<blockquote>
+		<ul>
+			<li>
+				<p><strong>Sections</strong> follow tag-based hierarchy (similar to HTML!).</p>
+			</li>
+			<li>
+				<p><strong>Main-tags</strong> (intuitively, these are the 'broad' sections) use double angle brackets
+					(<code>&lt;&lt; &gt;&gt;</code>).</p>
+			</li>
+			<li>
+				<p><strong>Sub-tags</strong> (intuitively, these are the sub-sections) use a simple
+					<code>tag_name:</code> format
+				</p>
+			</li>
+			<li>
+				<p>A main-tag MUST have all its sub-tags, even if they are empty. This is to ensure that the document is
+					well-structured and complete.</p>
+			</li>
+			<li>
+				<p><strong>Comments</strong> are started using <code>//</code>.</p>
+			</li>
+		</ul>
+	</blockquote>
+	<h2 id="header-block">Header Block</h2>
+	<p>Every submission must inlcude a header in the following format. All fields of the header are mandatory.</p>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">header</span>
+			<p><span style="color: aqua;">assignment</span>: Assignment 5: Sorting &amp; Searching <br>
+				<span style="color: aqua;">student</span>: Vaani Goenka<br>
+				<span style="color: aqua;">date</span>: 15th June 2025<br>
+				<span style="color: aqua;">collaborators</span>: None
+			</p>
+			<p><span style="color: #e6ea92;">header</span>&gt;&gt;</p>
+	</div>
+	<h2
+		id="syntax-in-action-span-style%22color-3674b5%22bspanspan-style%22color-7f55b1%22ospanspan-style%22color-ef7f08%22ospanspan-style%22color-096b68%22pspan">
+		Syntax in action: <span style="color: #3674B5;">B</span><span style="color: #7F55B1;">O</span><span
+			style="color: #ef7f08;">O</span><span style="color: #096B68;">P</span>!</h2>
+	<hr>
+	<h2 id="1-problem-block">1. Problem Block</h2>
+	<div style="text-align: left; margin-left: 5%; ">
+		<p>&lt;&lt;<span style="color: aqua;">problem</span> <span style="color: orange;">1</span>: &quot;Title of the
+			Problem&quot;</p>
+		... (all other BOOP blocks go here)
+		<p><span style="color: aqua;">problem</span>&gt;&gt;</p>
+	</div>
+	<blockquote>
+		<ul>
+			<li>Every problem must be enclosed within a problem block. Failure to do so might result in a blank
+				submission despite other BOOP tags.</li>
+			<li>'problem' must be followed by a number, a colon and the title of the problem in double quotes as shown
+				above.</li>
+			<li>Proper error message for the above is in progress.</li>
+		</ul>
+	</blockquote>
+	<hr>
+	<h2 id="2-blueprint">2. Blueprint</h2>
+	<p>This main-section is intended for the user to lay out the correctness criteria of their program i.e. what are the
+		characeteristics (formally) of the input and output that must hold true for the program to be considered
+		correct.</p>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">blueprint</span> <br>
+			<span style="color: aqua">requires</span>: ... <br>
+			<span style="color: aqua">ensures</span>:...
+			<p><span style="color: #e6ea92;">blueprint</span>&gt;&gt;</p>
+	</div>
+	<hr>
+	<h2 id="3-operational-steps">3. Operational Steps</h2>
+	<p>This section is for the user to explain their algorithm (process) for solving the given problem as if to a human.
+	</p>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">operational steps</span> <br>
+			<span style="color: aqua">step 1</span>: Considering the base case n=0, we can think
+			of the problem as one.... <br>
+			<span style="color: aqua">step n</span>:...
+
+			<p><span style="color: #e6ea92;">operational steps</span>&gt;&gt;</p>
+	</div>
+	<hr>
+	<h2 id="4-ocaml-code">4. Ocaml Code</h2>
+	<p>Write your standard ICS-friendly OCaml code here. It will be validated by the ICS OCaml validator.</p>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">ocaml code</span>
+			<br>(* Write your code in regular OCaml syntax, following ICS guidelines *)
+
+			<p><span style="color: #e6ea92;">ocaml code</span>&gt;&gt;</p>
+	</div>
+	<p>The status of your code is then reflected in the compiled version as so:</p>
+	<div align="center">
+		<img src="compiled_status.png" alt="Compiled Status" width="300px" />
+	</div>
+
+	<p>Errors in your code will appear in a pop-up during compilation, but will not stop compilation. Your submission
+		will be compiled and your PDF will have your code marked as invalid according to ICS syntax.</p>
+	<div align="center">
+		<img src="error_msg.png" alt="Ocaml Error Message" width="500px" />
+	</div>
+	<div align="center">
+		<img src="validation_failed.png" alt="Validation Error in PDF" width="300px" />
+	</div>
+	<hr>
+	<h2 id="5-%F0%9F%93%96-proof">5. 📖 Proof</h2>
+	<p>This section is intended for the user to provide a complete and formal proof that their program satisfies the
+		given correctness criteria in the blueprint.</p>
+	<h3 id="proof-by-induction-would-look-like">Proof by induction would look like:</h3>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">proof</span> <br>
+			<<<span style="color: #e6ea92;">induction</span> <br> <br>
+				<span style="color: aqua;">base case</span>: ... <br> <br>
+				<span style="color: aqua;">induction hypothesis</span>: ... <br><br>
+				<span style="color: aqua;">indutive step</span>: ... <br> <br>
+				<span style="color: #e6ea92;">induction</span>>><br>
+				<p><span style="color: #e6ea92;">proof</span>&gt;&gt;</p>
+	</div>
+	<h3 id="loop-invariants-would-look-like">Loop invariants would look like:</h3>
+	<div style="text-align: left; margin-left: 5%; ">
+		<<<span style="color: #e6ea92;">proof</span> <br>
+			<<<span style="color: #e6ea92;">invariant</span> <br> <br>
+				<span style="color: aqua;">pre-condition</span>: ... <br> <br>
+				<span style="color: aqua;">after the ith step</span>: ... <br><br>
+				<span style="color: aqua;">after the (i+1)th step</span>: ... <br> <br>
+				<span style="color: aqua;">post-condition</span>: ... <br> <br>
+				<span style="color: #e6ea92;">invariant</span>>><br>
+				<p><span style="color: #e6ea92;">proof</span>&gt;&gt;</p>
+	</div>
+	<h2 id="usage">Usage:</h2>
+	<ol>
+		<li>Install dependencies in your working folder (Assuming you have opam installed. opam is the package manager
+			for OCaml.)</li>
+	</ol>
+	<pre class="hljs"><code><div>opam install dune ocaml odoc ppxlib
+</div></code></pre>
+	<ol start="2">
+		<li>Create your .ics file in your working folder</li>
+		<li>Open the command palette (Cmd+Shift+P on mac or Ctrl+Shift+P on windows)</li>
+		<li>Type ICS</li>
+		<li>Select ICS: Compile ICS</li>
+		<li>You can view your pdf open in your default browser. Further, a raw html file (with some accompanying css)
+			will be available on <code>Desktop/output</code>. Most users may discard this file if you do not need it.
+		</li>
+	</ol>
+	<h6 style="color: red;">Please note that the dropdown option: 'Compile for assignment #1' is a test option and not
+		relevant to current users!</h6>
+	<!-- <h2 id="information-for-instructors">Information for Instructors</h2>
+	<h3 id="customisation-for-compilation">Customisation for compilation</h3>
+	<p>Instructors may modify the file <code>src/assignment_1.txt</code> (for assignment_1 example) by simply specifying
+		the flags they wish to allow as follows:</p>
+	<pre class="hljs"><code><div>const allowed_flags = &quot;-allow_for_loops&quot;;
+</div></code></pre>
+	<p>All allowed flags are:</p>
+	<pre class="hljs"><code><div>-allow_for_loops -allow_while_loops -allow_mutability -allow_lambdas
+</div></code></pre>
+	<p>By default, none of these are set to allowed. <br>
+		Currently, there is a test command available on opening the command palette saying
+		<code>compile for assignment #1</code>. This applies instructor modifications to <code>assignment_1.txt</code>
+		effectively in compilation.
+	</p>
+	<h6> Modifcations to instructor pipeline are in progress. </h6> -->
+	<hr>
+	<h3 id="acknowledgements">Acknowledgements</h3>
+	<p>Thank you to <a href="https://aalok-thakkar.github.io">Prof Aalok D. Thakkar</a> for his guidance and mentorship.
+	</p>
+	<h3 id="version-info">Version Info</h3>
+	<p>Developer and Maintainer: Vaani Goenka vaani.goenka_ug2024@ashoka.edu.in <br>
+		Changelog <br>
+		0.5.0 <br>
+		Second major release <br>
+		OCaml code validation <br>
+		Instructor discretion to add plugins to customise validation <br>
+		Better extension features like collapsing sections <br>
+		Better error messages</p>
+
+</body>
+
+</html>
