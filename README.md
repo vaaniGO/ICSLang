@@ -143,7 +143,7 @@ opam install dune ocaml odoc ppxlib
 3. Open the command palette (Cmd+Shift+P on mac or Ctrl+Shift+P on windows)
 4. Type ICS
 5. Select ICS: Compile ICS 
-6. You can view your pdf open in your default browser. Further, a raw html file (with some accompanying css) will be available on ```Desktop/output```. Most users may discard this file if you do not need it.
+6. Your PDF opens up in your default PDF viewer. 
 <h6 style="color: red;">Please note that the dropdown option: 'Compile for assignment #1' is a test option and not relevant to current users!</h6>
 
 ## Information for Instructors
