@@ -17,6 +17,8 @@ The ICS language syntax is designed to be simple and intuitive, allowing users t
 > - A main-tag MUST have all its sub-tags, even if they are empty. This is to ensure that the document is well-structured and complete.
 > - **Comments** are started using `//`. 
 
+Note: Currently 'newline' is only supported in 'proof', specifically 'induction'. The other sections will soon support newlines.
+
 ## Header Block
 
 Every submission must inlcude a header in the following format. All fields of the header are mandatory.
@@ -170,11 +172,12 @@ Thank you to [Prof Aalok D. Thakkar](https://aalok-thakkar.github.io) for his gu
 ### Version Info
 Developer and Maintainer: Vaani Goenka vaani.goenka_ug2024@ashoka.edu.in \
 Changelog \
-0.5.0 \
+0.5.4 \
 Second major release \
 OCaml code validation \
 Instructor discretion to add plugins to customise validation \
 Better extension features like collapsing sections \
-Better error messages 
+Newline bug fixed \
+Better error messages, PDF generation error fixed! 
 
 

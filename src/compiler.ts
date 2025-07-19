@@ -571,7 +571,7 @@ export class ICSCompiler {
     }
 
     private processSectionContent(section: ICSSection, content: string) {
-        section.content = content.trim();
+        section.content = content;
 
         switch (section.type) {
             case 'blueprint':
@@ -733,30 +733,33 @@ export class ICSCompiler {
 
         for (const line of lines) {
             // Skip section markers
-            if (line.trim().startsWith('<<') || line.trim().endsWith('>>')) {
+            if (line.startsWith('<<') || line.endsWith('>>')) {
                 continue;
             }
 
-            const trimmed = line.trim().toLowerCase();
+            const trimmed = line.toLowerCase();
 
             if (trimmed.startsWith('base case:')) {
                 if (currentSubsection) {
                     section.proofSubsections![currentSubsection] = currentContent.join('\n').trim();
                 }
                 currentSubsection = 'base-case';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
+                const afterColon = line.substring(line.indexOf(':') + 1).trim();
+                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
             } else if (trimmed.startsWith('induction hypothesis:')) {
                 if (currentSubsection) {
                     section.proofSubsections![currentSubsection] = currentContent.join('\n').trim();
                 }
                 currentSubsection = 'induction-hypothesis';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
+                const afterColon = line.substring(line.indexOf(':') + 1).trim();
+                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
             } else if (trimmed.startsWith('inductive step:')) {
                 if (currentSubsection) {
                     section.proofSubsections![currentSubsection] = currentContent.join('\n').trim();
                 }
                 currentSubsection = 'inductive-step';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
+                const afterColon = line.substring(line.indexOf(':') + 1).trim();
+                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
             } else if (currentSubsection && trimmed) {
                 currentContent.push(line);
             }
@@ -895,7 +898,7 @@ export class ICSCompiler {
     private generateOCamlCodeHTML(section: ICSSection): string {
         let ocaml_code = section.content.trim();
         let status = "";
-        console.log("here");
+
         const ppxDir = path.resolve(__dirname, '../../ICSLang/ppx_1');
         const tempDir = ppxDir;
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -910,8 +913,6 @@ export class ICSCompiler {
                 stdio: 'pipe',
                 cwd: ppxDir
             });
-            console.log(`eval $(opam env)
-        dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`);
             status = "Verified";
         } catch (err: any) {
             console.error(err.stderr || err.message);
@@ -1016,6 +1017,7 @@ export class ICSCompiler {
 
                 // Inductive step
                 if (section.proofSubsections['inductive-step']) {
+
                     html += `
                 <div class="induction inductive-step sub-section">
                     <span class="invariant-header">Inductive Step: </span> <br>
@@ -1035,7 +1037,7 @@ export class ICSCompiler {
     private formatProofContent(content: string): string {
         // Format line references
         const lineRefRegex = /line (\d+)/g;
-        return this.escapeHtml(content).replace(lineRefRegex, '<span class="line-ref">line $1</span>');
+        return this.escapeHtml(content).replace(lineRefRegex, '<span class="line-ref">line $1</span>').replace(/\n/g, '<br>');
     }
 
     private escapeHtml(text: string): string {
