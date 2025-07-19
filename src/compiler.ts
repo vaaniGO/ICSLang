@@ -90,11 +90,8 @@ export class ICSCompiler {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
 
-            // Launch Puppeteer and generate PDF directly from HTML string
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            // Launch Puppeteer with Chrome installation handling
+            browser = await this.launchPuppeteerWithFallback();
 
             const page = await browser.newPage();
 
@@ -123,7 +120,26 @@ export class ICSCompiler {
             vscode.env.openExternal(uri);
 
         } catch (error) {
-            vscode.window.showErrorMessage(`Compilation failed: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (errorMessage.includes('Could not find Chrome')) {
+                // Specific Chrome installation error
+                const action = await vscode.window.showErrorMessage(
+                    'Chrome browser not found. This is required for PDF generation.',
+                    'Install Chrome',
+                    'Show Instructions'
+                );
+
+                if (action === 'Install Chrome') {
+                    await this.installChromeWithProgress();
+                } else if (action === 'Show Instructions') {
+                    vscode.window.showInformationMessage(
+                        'To fix this issue, open terminal and run: npx puppeteer browsers install chrome'
+                    );
+                }
+            } else {
+                vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
+            }
         } finally {
             // Close browser - no temporary files to clean up
             if (browser) {
@@ -131,6 +147,118 @@ export class ICSCompiler {
             }
         }
     }
+
+    // Helper method to launch Puppeteer with fallback Chrome installation
+    private async launchPuppeteerWithFallback(): Promise<puppeteer.Browser> {
+        try {
+            // First attempt - try to launch with default settings
+            return await puppeteer.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage', // Helps with memory issues
+                    '--disable-extensions',
+                    '--disable-plugins'
+                ]
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (errorMessage.includes('Could not find Chrome')) {
+                // Show progress and attempt to install Chrome
+                const installed = await this.installChromeWithProgress();
+
+                if (installed) {
+                    // Try launching again after installation
+                    return await puppeteer.launch({
+                        headless: true,
+                        args: [
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-extensions',
+                            '--disable-plugins'
+                        ]
+                    });
+                }
+            }
+
+            // Re-throw the original error if we can't handle it
+            throw error;
+        }
+    }
+
+    // Helper method to install Chrome with progress indication
+    private async installChromeWithProgress(): Promise<boolean> {
+        return vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Installing Chrome for PDF generation",
+            cancellable: false
+        }, async (progress) => {
+            try {
+                progress.report({ increment: 0, message: "Downloading Chrome..." });
+
+                // Run the installation command
+                execSync('npx puppeteer browsers install chrome', {
+                    stdio: 'pipe',
+                    timeout: 300000 // 5 minute timeout
+                });
+
+                progress.report({ increment: 100, message: "Chrome installed successfully!" });
+
+                vscode.window.showInformationMessage(
+                    'Chrome installed successfully! You can now compile ICS files to PDF.'
+                );
+
+                return true;
+            } catch (installError) {
+                const installErrorMessage = installError instanceof Error ? installError.message : String(installError);
+
+                vscode.window.showErrorMessage(
+                    `Failed to install Chrome automatically: ${installErrorMessage}. ` +
+                    'Please run "npx puppeteer browsers install chrome" in your terminal.'
+                );
+
+                return false;
+            }
+        });
+    }
+
+    // Optional: Add a command to manually install Chrome
+    public async installChrome() {
+        await this.installChromeWithProgress();
+    }
+
+    // Optional: Method to check if Chrome is available
+    private async isChromeAvailable(): Promise<boolean> {
+        try {
+            const browser = await puppeteer.launch({ headless: true });
+            await browser.close();
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // Optional: Add a health check command
+    public async checkChromeStatus() {
+        const available = await this.isChromeAvailable();
+
+        if (available) {
+            vscode.window.showInformationMessage('Chrome is properly installed and ready for PDF generation.');
+        } else {
+            const action = await vscode.window.showWarningMessage(
+                'Chrome is not available for PDF generation.',
+                'Install Chrome'
+            );
+
+            if (action === 'Install Chrome') {
+                await this.installChromeWithProgress();
+            }
+        }
+    }
+
 
     private parseDocument(document: vscode.TextDocument): ICSDocument | null {
         const content = document.getText();

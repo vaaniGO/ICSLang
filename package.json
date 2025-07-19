@@ -80,7 +80,8 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "postinstall": "npx puppeteer browsers install chrome"
     },
     "devDependencies": {
         "@types/node": "16.x",
