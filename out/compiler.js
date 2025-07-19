@@ -29,7 +29,7 @@ const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
-const puppeteer = __importStar(require("puppeteer"));
+const os = __importStar(require("os"));
 class ICSCompiler {
     constructor() {
         const config = vscode.workspace.getConfiguration('ics');
@@ -63,7 +63,6 @@ class ICSCompiler {
         return path.join(resolvedOutputPath, `${baseName}.html`);
     }
     async compile(document) {
-        let browser = null;
         try {
             const parsed = this.parseDocument(document);
             if (!parsed) {
@@ -81,14 +80,50 @@ class ICSCompiler {
             if (!fs.existsSync(outputDir)) {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
-            // Launch Puppeteer and generate PDF directly from HTML string
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            // Try multiple PDF generation methods with fallbacks
+            await this.generatePDFWithFallbacks(htmlWithCSS, outputFile);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
+        }
+    }
+    async generatePDFWithFallbacks(html, outputFile) {
+        // Method 1: Try Puppeteer (original method)
+        try {
+            await this.generatePDFWithPuppeteer(html, outputFile);
+            vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
+            const uri = vscode.Uri.file(outputFile);
+            vscode.env.openExternal(uri);
+            return;
+        }
+        catch (puppeteerError) {
+            console.log('Puppeteer failed, trying alternative methods...');
+        }
+        // Method 2: Try html-pdf-node
+        try {
+            await this.generatePDFWithHtmlPdfNode(html, outputFile);
+            vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
+            const uri = vscode.Uri.file(outputFile);
+            vscode.env.openExternal(uri);
+            return;
+        }
+        catch (htmlPdfError) {
+            console.log('html-pdf-node failed, trying browser fallback...');
+        }
+        // Method 3: Fallback to opening HTML in browser
+        await this.openInBrowser(html);
+    }
+    // Original Puppeteer method
+    async generatePDFWithPuppeteer(html, outputFile) {
+        const puppeteer = require('puppeteer');
+        let browser = null;
+        try {
+            // Launch Puppeteer with Chrome installation handling
+            browser = await this.launchPuppeteerWithFallback();
             const page = await browser.newPage();
             // Set content directly from HTML string - no temporary files
-            await page.setContent(htmlWithCSS, {
+            await page.setContent(html, {
                 waitUntil: 'networkidle0'
             });
             // Generate PDF directly to final location
@@ -103,18 +138,145 @@ class ICSCompiler {
                     right: '20px'
                 }
             });
-            vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
-            // Open the PDF file
-            const uri = vscode.Uri.file(outputFile);
-            vscode.env.openExternal(uri);
-        }
-        catch (error) {
-            vscode.window.showErrorMessage(`Compilation failed: ${error}`);
         }
         finally {
-            // Close browser - no temporary files to clean up
             if (browser) {
                 await browser.close();
+            }
+        }
+    }
+    // Alternative Method 1: html-pdf-node
+    async generatePDFWithHtmlPdfNode(html, outputFile) {
+        try {
+            const htmlPdf = require('html-pdf-node');
+            const options = {
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '20px',
+                    bottom: '20px',
+                    left: '20px',
+                    right: '20px'
+                }
+            };
+            const file = { content: html };
+            const pdfBuffer = await htmlPdf.generatePdf(file, options);
+            fs.writeFileSync(outputFile, pdfBuffer);
+        }
+        catch (error) {
+            throw new Error(`html-pdf-node generation failed: ${error}`);
+        }
+    }
+    // Alternative Method 2: Open in browser for manual PDF save
+    async openInBrowser(html) {
+        const tempPath = path.join(os.tmpdir(), `ics-temp-${Date.now()}.html`);
+        fs.writeFileSync(tempPath, html);
+        const uri = vscode.Uri.file(tempPath);
+        await vscode.env.openExternal(uri);
+        vscode.window.showInformationMessage('PDF generation failed. HTML opened in browser. Use Ctrl+P (Cmd+P on Mac) to print to PDF.', 'OK');
+        // Clean up temp file after a delay
+        setTimeout(() => {
+            try {
+                if (fs.existsSync(tempPath)) {
+                    fs.unlinkSync(tempPath);
+                }
+            }
+            catch (error) {
+                console.log('Could not clean up temp file:', error);
+            }
+        }, 30000); // 30 seconds delay
+    }
+    // Helper method to launch Puppeteer with fallback Chrome installation
+    async launchPuppeteerWithFallback() {
+        const puppeteer = require('puppeteer');
+        try {
+            // First attempt - try to launch with default settings
+            return await puppeteer.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-extensions',
+                    '--disable-plugins'
+                ]
+            });
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('Could not find Chrome')) {
+                // Show progress and attempt to install Chrome
+                const installed = await this.installChromeWithProgress();
+                if (installed) {
+                    // Try launching again after installation
+                    return await puppeteer.launch({
+                        headless: true,
+                        args: [
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-extensions',
+                            '--disable-plugins'
+                        ]
+                    });
+                }
+            }
+            // Re-throw the original error if we can't handle it
+            throw error;
+        }
+    }
+    // Helper method to install Chrome with progress indication
+    async installChromeWithProgress() {
+        return vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Installing Chrome for PDF generation",
+            cancellable: false
+        }, async (progress) => {
+            try {
+                progress.report({ increment: 0, message: "Downloading Chrome..." });
+                // Run the installation command
+                (0, child_process_1.execSync)('npx puppeteer browsers install chrome', {
+                    stdio: 'pipe',
+                    timeout: 300000 // 5 minute timeout
+                });
+                progress.report({ increment: 100, message: "Chrome installed successfully!" });
+                vscode.window.showInformationMessage('Chrome installed successfully! You can now compile ICS files to PDF.');
+                return true;
+            }
+            catch (installError) {
+                const installErrorMessage = installError instanceof Error ? installError.message : String(installError);
+                vscode.window.showErrorMessage(`Failed to install Chrome automatically: ${installErrorMessage}. ` +
+                    'Please run "npx puppeteer browsers install chrome" in your terminal.');
+                return false;
+            }
+        });
+    }
+    // Optional: Add a command to manually install Chrome
+    async installChrome() {
+        await this.installChromeWithProgress();
+    }
+    // Optional: Method to check if Chrome is available
+    async isChromeAvailable() {
+        try {
+            const puppeteer = require('puppeteer');
+            const browser = await puppeteer.launch({ headless: true });
+            await browser.close();
+            return true;
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    // Optional: Add a health check command
+    async checkChromeStatus() {
+        const available = await this.isChromeAvailable();
+        if (available) {
+            vscode.window.showInformationMessage('Chrome is properly installed and ready for PDF generation.');
+        }
+        else {
+            const action = await vscode.window.showWarningMessage('Chrome is not available for PDF generation.', 'Install Chrome');
+            if (action === 'Install Chrome') {
+                await this.installChromeWithProgress();
             }
         }
     }
