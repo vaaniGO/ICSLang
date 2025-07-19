@@ -3,7 +3,7 @@
     "displayName": "BOOP: How to Right Code!",
     "description": "Get it right, then get it written!",
     "publisher": "VaaniGoenka",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.74.0"
