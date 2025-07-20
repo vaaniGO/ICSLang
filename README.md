@@ -17,6 +17,7 @@ The ICS language syntax is designed to be simple and intuitive, allowing users t
 > - A main-tag MUST have all its sub-tags, even if they are empty. This is to ensure that the document is well-structured and complete.
 > - **Comments** are started using `//`. 
 
+Note: A line with an open tag (e.g. requires: ) should contain the tag only. Start writing the content from the next line onwards.
 Note: Currently 'newline' is only supported in 'proof', specifically 'induction'. The other sections will soon support newlines.
 
 ## Header Block
