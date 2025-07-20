@@ -167,10 +167,39 @@ class ICSFoldingRangeProvider {
         const mainSections = ['problem', 'blueprint', 'operational steps', 'ocaml code', 'proof', 'header'];
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text.trim();
-            // Check for section start (<<section)
+            // Check for numbered problem sections first (like "<<problem 1:")
+            const numberedProblemMatch = line.match(/^<<problem\s+\d+:/);
+            if (numberedProblemMatch) {
+                sectionStack.push({
+                    name: 'numbered_problem',
+                    startLine: i,
+                    kind: vscode.FoldingRangeKind.Region
+                });
+                continue;
+            }
+            // Check for problem end
+            if (line === 'problem>>') {
+                // Look for either numbered_problem or regular problem
+                for (let j = sectionStack.length - 1; j >= 0; j--) {
+                    if (sectionStack[j].name === 'numbered_problem' || sectionStack[j].name === 'problem') {
+                        const section = sectionStack[j];
+                        if (i > section.startLine) {
+                            foldingRanges.push(new vscode.FoldingRange(section.startLine, i - 1, section.kind));
+                        }
+                        sectionStack.splice(j);
+                        break;
+                    }
+                }
+                continue;
+            }
+            // Check for regular section start (<<section)
             const sectionStartMatch = line.match(/^<<(.+)$/);
             if (sectionStartMatch) {
                 const sectionName = sectionStartMatch[1].trim();
+                // Skip if this is a numbered problem (already handled above)
+                if (sectionName.match(/^problem\s+\d+:/)) {
+                    continue;
+                }
                 // Determine if this is a main section or nested section
                 const isMainSection = mainSections.includes(sectionName);
                 const kind = isMainSection ? vscode.FoldingRangeKind.Region : vscode.FoldingRangeKind.Comment;
@@ -185,6 +214,10 @@ class ICSFoldingRangeProvider {
             const sectionEndMatch = line.match(/^(.+)>>$/);
             if (sectionEndMatch) {
                 const sectionName = sectionEndMatch[1].trim();
+                // Skip if this is a problem end (already handled above)
+                if (sectionName === 'problem') {
+                    continue;
+                }
                 // Find the matching opening section
                 for (let j = sectionStack.length - 1; j >= 0; j--) {
                     if (sectionStack[j].name === sectionName) {
@@ -195,30 +228,6 @@ class ICSFoldingRangeProvider {
                             section.kind));
                         }
                         // Remove this section and all nested sections
-                        sectionStack.splice(j);
-                        break;
-                    }
-                }
-                continue;
-            }
-            // Check for problem sections (like "problem 1:")
-            const problemMatch = line.match(/^<<problem\s+\d+:/);
-            if (problemMatch) {
-                sectionStack.push({
-                    name: 'problem',
-                    startLine: i,
-                    kind: vscode.FoldingRangeKind.Region
-                });
-                continue;
-            }
-            // Check for problem end
-            if (line === 'problem>>') {
-                for (let j = sectionStack.length - 1; j >= 0; j--) {
-                    if (sectionStack[j].name === 'problem') {
-                        const section = sectionStack[j];
-                        if (i > section.startLine) {
-                            foldingRanges.push(new vscode.FoldingRange(section.startLine, i - 1, section.kind));
-                        }
                         sectionStack.splice(j);
                         break;
                     }

@@ -294,10 +294,14 @@ class ICSCompiler {
         let currentProblem = null;
         let currentSection = null;
         let currentContent = [];
-        let inProblem = false;
-        let inSection = false;
         let inHeader = false;
         let sectionStack = [];
+        // Helper function to completely reset problem state
+        const resetProblemState = () => {
+            currentSection = null;
+            currentContent = [];
+            sectionStack = [];
+        };
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             // Check for header section start
@@ -337,47 +341,37 @@ class ICSCompiler {
             const problemStartMatch = line.match(/^<<problem\s+(.+)$/);
             if (problemStartMatch) {
                 // End previous problem if exists
-                if (currentProblem && inProblem) {
+                if (currentProblem) {
                     // End current section if exists
-                    if (currentSection && inSection) {
+                    if (currentSection && sectionStack.length > 0) {
                         this.processSectionContent(currentSection, currentContent.join('\n'));
                         currentProblem.sections.push(currentSection);
                     }
                     doc.problems.push(currentProblem);
                 }
-                // Start new problem
+                // Start new problem with complete state reset
                 currentProblem = {
                     title: problemStartMatch[1].trim(),
                     sections: []
                 };
-                currentSection = null;
-                currentContent = [];
-                inProblem = true;
-                inSection = false;
-                sectionStack = [];
+                resetProblemState(); // Complete reset of all section-related state
                 continue;
             }
             // Check for problem end
-            if (line === 'problem>>' && inProblem) {
+            if (line === 'problem>>' && currentProblem) {
                 // End current section if exists
-                if (currentSection && inSection) {
+                if (currentSection && sectionStack.length > 0) {
                     this.processSectionContent(currentSection, currentContent.join('\n'));
                     currentProblem.sections.push(currentSection);
                 }
-                // End current problem
-                if (currentProblem) {
-                    doc.problems.push(currentProblem);
-                }
+                // End current problem with complete state reset
+                doc.problems.push(currentProblem);
                 currentProblem = null;
-                currentSection = null;
-                currentContent = [];
-                inProblem = false;
-                inSection = false;
-                sectionStack = [];
+                resetProblemState(); // Complete reset
                 continue;
             }
             // Only process sections if we're inside a problem
-            if (!inProblem) {
+            if (!currentProblem) {
                 continue;
             }
             // Check for section start
@@ -391,7 +385,7 @@ class ICSCompiler {
                     if (nestedMatch) {
                         const nestedSection = nestedMatch[1];
                         // End previous section if exists
-                        if (currentSection && inSection) {
+                        if (currentSection && sectionStack.length > 0) {
                             this.processSectionContent(currentSection, currentContent.join('\n'));
                             currentProblem.sections.push(currentSection);
                         }
@@ -403,12 +397,25 @@ class ICSCompiler {
                             proofType: nestedSection,
                             proofSubsections: {}
                         };
+                        // Clear stack and push both sections
+                        sectionStack = [];
                         sectionStack.push({ name: sectionName, section: currentSection });
                         sectionStack.push({ name: nestedSection, section: currentSection });
                         currentContent = [];
-                        inSection = true;
                         continue;
                     }
+                }
+                // Check if we're already in a section and trying to open another at the top level
+                if (sectionStack.length > 0) {
+                    // End the current section before starting a new one
+                    if (currentSection) {
+                        this.processSectionContent(currentSection, currentContent.join('\n'));
+                        currentProblem.sections.push(currentSection);
+                    }
+                    // Reset section state
+                    currentSection = null;
+                    currentContent = [];
+                    sectionStack = [];
                 }
                 // Handle regular section opening
                 sectionStack.push({ name: sectionName, section: null });
@@ -424,12 +431,7 @@ class ICSCompiler {
                     }
                 }
                 else {
-                    // End previous section if exists
-                    if (currentSection && inSection) {
-                        this.processSectionContent(currentSection, currentContent.join('\n'));
-                        currentProblem.sections.push(currentSection);
-                    }
-                    // Start new section
+                    // Start new section (we already ended the previous one above if needed)
                     let sectionType;
                     if (sectionName === 'operational steps') {
                         sectionType = 'operational_steps';
@@ -454,7 +456,6 @@ class ICSCompiler {
                     }
                     sectionStack[sectionStack.length - 1].section = currentSection;
                     currentContent = [];
-                    inSection = true;
                 }
                 continue;
             }
@@ -462,6 +463,11 @@ class ICSCompiler {
             const closeSectionMatch = line.match(/^(blueprint|operational steps|ocaml code|proof|induction|invariant)>>$/);
             if (closeSectionMatch) {
                 const closingSectionName = closeSectionMatch[1];
+                // Only process if we have an active section stack
+                if (sectionStack.length === 0) {
+                    // Skip orphaned closing tags
+                    continue;
+                }
                 // Find the matching opening section in the stack
                 let foundIndex = -1;
                 for (let j = sectionStack.length - 1; j >= 0; j--) {
@@ -475,26 +481,25 @@ class ICSCompiler {
                     sectionStack.splice(foundIndex);
                     // If we're closing the outermost section, end the main section
                     if (sectionStack.length === 0) {
-                        if (currentSection && inSection) {
+                        if (currentSection) {
                             this.processSectionContent(currentSection, currentContent.join('\n'));
                             currentProblem.sections.push(currentSection);
                         }
                         currentSection = null;
                         currentContent = [];
-                        inSection = false;
                     }
                 }
                 continue;
             }
             // Add line to current section content
-            if (inSection) {
+            if (sectionStack.length > 0) {
                 currentContent.push(lines[i]);
             }
         }
         // Handle case where document ends without proper closing
-        if (currentProblem && inProblem) {
+        if (currentProblem) {
             // End current section if exists
-            if (currentSection && inSection) {
+            if (currentSection && sectionStack.length > 0) {
                 this.processSectionContent(currentSection, currentContent.join('\n'));
                 currentProblem.sections.push(currentSection);
             }

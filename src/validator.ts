@@ -17,10 +17,10 @@ export class ICSValidator {
         const content = document.getText();
         const lines = content.split('\n');
 
-        // Track sections and their states
-        const sectionStates = new Map<string, { opened: boolean, line: number, closed: boolean }>();
+        // Track sections and their states - reset for each problem
+        let sectionStates = new Map<string, { opened: boolean, line: number, closed: boolean }>();
         const requiredSubsections = new Map<string, string[]>();
-        const foundSubsections = new Map<string, Set<string>>();
+        let foundSubsections = new Map<string, Set<string>>();
 
         // Define required subsections for each section type
         requiredSubsections.set('blueprint', ['requires', 'ensures']);
@@ -29,23 +29,85 @@ export class ICSValidator {
         requiredSubsections.set('header', ['assignment', 'student', 'date', 'collaborators']);
 
         // Track section hierarchy - use a stack to handle nested sections
-        const sectionStack: string[] = [];
+        let sectionStack: string[] = [];
         let currentProofType: string | null = null;
 
         // Track header information found outside of header section
         const headerInfoOutsideSection = new Map<string, number>();
         let headerSectionFound = false;
+        let inProblem = false;
+        let inHeader = false;
+
+        // Helper function to reset problem-specific state
+        const resetProblemState = () => {
+            sectionStates = new Map<string, { opened: boolean, line: number, closed: boolean }>();
+            foundSubsections = new Map<string, Set<string>>();
+            sectionStack = [];
+            currentProofType = null;
+        };
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
 
+            // Check for problem start
+            const problemStartMatch = line.match(/^<<problem\s+(.+)$/);
+            if (problemStartMatch) {
+                // Validate any unclosed sections from previous problem
+                if (inProblem) {
+                    this.validateUnclosedSections(sectionStates, lines, diagnostics);
+                }
+
+                // Reset state for new problem
+                resetProblemState();
+                inProblem = true;
+                continue;
+            }
+
+            // Check for problem end
+            if (line === 'problem>>' && inProblem) {
+                // Validate unclosed sections for current problem
+                this.validateUnclosedSections(sectionStates, lines, diagnostics);
+
+                // Reset state after problem ends
+                resetProblemState();
+                inProblem = false;
+                continue;
+            }
+
+            // Check for header section start
+            if (line === '<<header') {
+                inHeader = true;
+                headerSectionFound = true;
+                sectionStates.set('header', { opened: true, line: i, closed: false });
+                sectionStack.push('header');
+                foundSubsections.set('header', new Set());
+                continue;
+            }
+
+            // Check for header section end
+            if (line === 'header>>' && inHeader) {
+                inHeader = false;
+                if (sectionStates.has('header')) {
+                    sectionStates.get('header')!.closed = true;
+                    this.validateRequiredSubsections('header', foundSubsections.get('header') || new Set(),
+                        requiredSubsections.get('header') || [], diagnostics, i);
+                }
+                sectionStack.pop();
+                continue;
+            }
+
+            // Skip non-problem content if not in header
+            if (!inProblem && !inHeader) {
+                continue;
+            }
+
             // Check for section opening - fixed syntax: <<keyword
-            const openSectionMatch = line.match(/^<<(blueprint|operational steps|ocaml code|proof|induction|invariant|header)$/);
+            const openSectionMatch = line.match(/^<<(blueprint|operational steps|ocaml code|proof|induction|invariant)$/);
             if (openSectionMatch) {
                 const sectionName = openSectionMatch[1];
 
-                // Check if section was already opened
-                if (sectionStates.has(sectionName) && sectionStates.get(sectionName)!.opened) {
+                // Check if section was already opened in current problem
+                if (sectionStates.has(sectionName) && sectionStates.get(sectionName)!.opened && !sectionStates.get(sectionName)!.closed) {
                     diagnostics.push(new vscode.Diagnostic(
                         new vscode.Range(i, 0, i, line.length),
                         `Section '${sectionName}' is already opened at line ${sectionStates.get(sectionName)!.line + 1}`,
@@ -69,15 +131,13 @@ export class ICSValidator {
                 } else if (sectionName === 'proof') {
                     // For generic proof sections, we don't set currentProofType
                     currentProofType = null;
-                } else if (sectionName === 'header') {
-                    headerSectionFound = true;
                 }
 
                 continue;
             }
 
             // Check for section closing - fixed syntax: keyword>>
-            const closeSectionMatch = line.match(/^(blueprint|operational steps|ocaml code|proof|induction|invariant|header)>>$/);
+            const closeSectionMatch = line.match(/^(blueprint|operational steps|ocaml code|proof|induction|invariant)>>$/);
             if (closeSectionMatch) {
                 const sectionName = closeSectionMatch[1];
 
@@ -91,12 +151,39 @@ export class ICSValidator {
                     continue;
                 }
 
-                // Check if we're in the right section context - should be the top of the stack
-                const currentSection = sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : null;
-                if (currentSection !== sectionName) {
+                // Check if section is already closed
+                if (sectionStates.get(sectionName)!.closed) {
                     diagnostics.push(new vscode.Diagnostic(
                         new vscode.Range(i, 0, i, line.length),
-                        `Closing tag for '${sectionName}' found but currently in section '${currentSection}'`,
+                        `Closing tag for '${sectionName}' found but section is already closed`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                    continue;
+                }
+
+                // Check if we're in the right section context
+                if (sectionStack.length === 0) {
+                    diagnostics.push(new vscode.Diagnostic(
+                        new vscode.Range(i, 0, i, line.length),
+                        `Closing tag for '${sectionName}' found but currently in section null`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                    continue;
+                }
+
+                // Find the section in the stack (handle nested sections)
+                let sectionIndex = -1;
+                for (let j = sectionStack.length - 1; j >= 0; j--) {
+                    if (sectionStack[j] === sectionName) {
+                        sectionIndex = j;
+                        break;
+                    }
+                }
+
+                if (sectionIndex === -1) {
+                    diagnostics.push(new vscode.Diagnostic(
+                        new vscode.Range(i, 0, i, line.length),
+                        `Closing tag for '${sectionName}' found but section is not in current context. Current stack: [${sectionStack.join(', ')}]`,
                         vscode.DiagnosticSeverity.Error
                     ));
                     continue;
@@ -109,8 +196,8 @@ export class ICSValidator {
                 this.validateRequiredSubsections(sectionName, foundSubsections.get(sectionName) || new Set(),
                     requiredSubsections.get(sectionName) || [], diagnostics, i);
 
-                // Pop from stack
-                sectionStack.pop();
+                // Remove from stack (remove this section and any nested ones)
+                sectionStack.splice(sectionIndex);
 
                 if (sectionName === 'induction' || sectionName === 'invariant') {
                     currentProofType = null;
@@ -119,30 +206,24 @@ export class ICSValidator {
             }
 
             // Check for header information outside of header section
-            if (!headerSectionFound || (sectionStack.length > 0 && sectionStack[sectionStack.length - 1] !== 'header')) {
+            if (!inHeader && (sectionStack.length === 0 || sectionStack[sectionStack.length - 1] !== 'header')) {
                 this.checkHeaderInfoOutsideSection(line, i, headerInfoOutsideSection, diagnostics);
             }
 
             // Check for subsections
             const currentSection = sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : null;
-            if (currentSection) {
+            if (currentSection && (inProblem || inHeader)) {
                 this.checkSubsections(line, currentSection, currentProofType, foundSubsections, i, diagnostics);
             }
 
             // Check for step references
-            this.validateStepReferences(line, document, i, diagnostics);
-        }
-
-        // Check for unclosed sections
-        for (const [sectionName, state] of sectionStates) {
-            if (state.opened && !state.closed) {
-                diagnostics.push(new vscode.Diagnostic(
-                    new vscode.Range(state.line, 0, state.line, lines[state.line].length),
-                    `Section '${sectionName}' is not closed`,
-                    vscode.DiagnosticSeverity.Error
-                ));
+            if (inProblem) {
+                this.validateStepReferences(line, document, i, diagnostics);
             }
         }
+
+        // Final validation for unclosed sections
+        this.validateUnclosedSections(sectionStates, lines, diagnostics);
 
         // Check if header section exists
         if (!headerSectionFound) {
@@ -156,6 +237,18 @@ export class ICSValidator {
         return diagnostics;
     }
 
+    // Helper method to validate unclosed sections
+    private validateUnclosedSections(sectionStates: Map<string, { opened: boolean, line: number, closed: boolean }>, lines: string[], diagnostics: vscode.Diagnostic[]) {
+        for (const [sectionName, state] of sectionStates) {
+            if (state.opened && !state.closed) {
+                diagnostics.push(new vscode.Diagnostic(
+                    new vscode.Range(state.line, 0, state.line, lines[state.line] ? lines[state.line].length : 0),
+                    `Section '${sectionName}' is not closed`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
+        }
+    }
     private checkHeaderInfoOutsideSection(
         line: string,
         lineNumber: number,
@@ -194,18 +287,17 @@ export class ICSValidator {
             }
         }
 
-        // Check for header subsections
+        // Check for header subsections - fixed to use regex for more flexible matching
         if (currentSection === 'header') {
-            if (line.toLowerCase().includes('assignment:')) {
+            const lowerLine = line.toLowerCase();
+            if (lowerLine.match(/assignment\s*:/)) {
                 foundSubsections.get('header')?.add('assignment');
-            } else if (line.toLowerCase().includes('student:')) {
+            } else if (lowerLine.match(/student\s*:/)) {
                 foundSubsections.get('header')?.add('student');
-            } else if (line.toLowerCase().includes('date:')) {
+            } else if (lowerLine.match(/date\s*:/)) {
                 foundSubsections.get('header')?.add('date');
-            } else if (line.toLowerCase().includes('collaborators:')) {
+            } else if (lowerLine.match(/collaborators\s*:/)) {
                 foundSubsections.get('header')?.add('collaborators');
-            } else if (line.toLowerCase().includes('problem:')) {
-                foundSubsections.get('header')?.add('problem');
             }
         }
 
