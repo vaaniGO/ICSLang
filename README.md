@@ -9,7 +9,7 @@
 
 The ICS language syntax is designed to be simple and intuitive, allowing users to write structured documents easily. There are only 5 syntax features to know:
 
-> - **Sections** follow tag-based hierarchy (similar to HTML!).
+> - **Sections** follow tag-based hierarchy (similar to HTML!). A line with an open tag (e.g. requires: ) should contain the tag only. Start writing the content from the next > > - line onwards.
 > 
 > - **Main-tags** (intuitively, these are the 'broad' sections) use double angle brackets (`<< >>`).
 > 
@@ -17,8 +17,7 @@ The ICS language syntax is designed to be simple and intuitive, allowing users t
 > - A main-tag MUST have all its sub-tags, even if they are empty. This is to ensure that the document is well-structured and complete.
 > - **Comments** are started using `//`. 
 
-Note: A line with an open tag (e.g. requires: ) should contain the tag only. Start writing the content from the next line onwards.
-Note: Currently 'newline' is only supported in 'proof', specifically 'induction'. The other sections will soon support newlines.
+Note: Currently 'newline' (i.e. different lines appearing on different lines in the compiled version) is only supported in 'proof', specifically 'induction', and 'blueprint'. The other sections will soon support newlines.
 
 ## Header Block
 
@@ -61,8 +60,10 @@ This main-section is intended for the user to lay out the correctness criteria o
 ```
 << blueprint  
 
-     requires : [conditions that must hold before execution] \
-     ensures : [conditions that must hold after execution]
+     requires : <br>
+     [conditions that must hold before execution] \
+     ensures : <br>
+     [conditions that must hold after execution]
 
  blueprint >>
 ```
@@ -115,9 +116,12 @@ This section is intended for the user to provide a complete and formal proof tha
  ```
 << proof  
 << induction  
- base case : ... 
- induction hypothesis : ... 
- indutive step : ...<br>
+ base case : <br>
+ ... <br>
+ induction hypothesis : <br>
+ ... <br>
+ indutive step : <br>
+ ...<br>
 
  proof >>
 ```
@@ -127,10 +131,14 @@ This section is intended for the user to provide a complete and formal proof tha
  ```
 << proof 
 << invariant 
- pre-condition : ... 
- after the ith step : ... 
- after the (i+1)th step : ...
- post-condition : ...
+ pre-condition : <br>
+ ...  <br>
+ after the ith step : <br>
+ ... <br>
+ after the (i+1)th step : <br>
+ ...<br>
+ post-condition : <br>
+ ...<br>
  invariant >>
 
  proof >>

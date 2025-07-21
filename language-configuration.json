@@ -2,7 +2,7 @@
     "name": "ics-language-support",
     "displayName": "ICS Language Support",
     "description": "Language support for ICS (Integrated Computer Science) format with LSP and compiler",
-    "version": "0.5.6",
+    "version": "0.5.7",
     "engines": {
         "vscode": "^1.74.0"
     },

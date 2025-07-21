@@ -769,14 +769,14 @@ class ICSCompiler {
             html += `
                 <div class="blueprint-requires sub-section">
                     <span class="blueprint-requires-header">Requires: </span> <br>
-                    ${this.escapeHtml(section.subsections.requires)}
+                    ${this.formatLines(section.subsections.requires)}
                 </div>`;
         }
         if (section.subsections?.ensures) {
             html += `
                 <div class="blueprint-ensures sub-section">
                     <span class="blueprint-ensures-header">Ensures: </span> <br>
-                    ${this.escapeHtml(section.subsections.ensures)}
+                    ${this.formatLines(section.subsections.ensures)}
                 </div>`;
         }
         html += `
@@ -864,7 +864,7 @@ class ICSCompiler {
                     html += `
                 <div class="invariant inv-condition">
                     <span class="invariant-header">Invariant Condition: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['invariant-condition'])}
+                    ${this.formatLines(section.proofSubsections['invariant-condition'])}
                 </div>`;
                 }
                 // Pre-condition
@@ -872,7 +872,7 @@ class ICSCompiler {
                     html += `
                 <div class="invariant pre-condition sub-section">
                     <span class="invariant-header">Pre-condition: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['pre-condition'])}
+                    ${this.formatLines(section.proofSubsections['pre-condition'])}
                 </div>`;
                 }
                 // After ith iteration
@@ -880,7 +880,7 @@ class ICSCompiler {
                     html += `
                 <div class="invariant ith-condition">
                     <span class="invariant-header">After the ith iteration: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['ith-condition'])}
+                    ${this.formatLines(section.proofSubsections['ith-condition'])}
                 </div>`;
                 }
                 // After after the (i+1)th stepth iteration
@@ -888,7 +888,7 @@ class ICSCompiler {
                     html += `
                 <div class="invariant i-1th-condition">
                     <span class="invariant-header">After the after the (i+1)th iteration: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['i-1th-condition'])}
+                    ${this.formatLines(section.proofSubsections['i-1th-condition'])}
                 </div>`;
                 }
                 // Post-condition
@@ -896,7 +896,7 @@ class ICSCompiler {
                     html += `
                 <div class="invariant post-condition">
                     <span class="invariant-header">Post-condition: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['post-condition'])}
+                    ${this.formatLines(section.proofSubsections['post-condition'])}
                 </div>`;
                 }
             }
@@ -910,7 +910,7 @@ class ICSCompiler {
                     html += `
                 <div class="induction base-case sub-section">
                     <span class="invariant-header">Base Case: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['base-case'])}
+                    ${this.formatLines(section.proofSubsections['base-case'])}
                 </div>`;
                 }
                 // Induction hypothesis
@@ -918,7 +918,7 @@ class ICSCompiler {
                     html += `
                 <div class="induction induction-hypothesis sub-section">
                     <span class="invariant-header">Induction Hypothesis: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['induction-hypothesis'])}
+                    ${this.formatLines(section.proofSubsections['induction-hypothesis'])}
                 </div>`;
                 }
                 // Inductive step
@@ -926,7 +926,7 @@ class ICSCompiler {
                     html += `
                 <div class="induction inductive-step sub-section">
                     <span class="invariant-header">Inductive Step: </span> <br>
-                    ${this.formatProofContent(section.proofSubsections['inductive-step'])}
+                    ${this.formatLines(section.proofSubsections['inductive-step'])}
                 </div>`;
                 }
             }
@@ -936,7 +936,7 @@ class ICSCompiler {
         </div>`;
         return html;
     }
-    formatProofContent(content) {
+    formatLines(content) {
         // Format line references
         const lineRefRegex = /line (\d+)/g;
         return this.escapeHtml(content).replace(lineRefRegex, '<span class="line-ref">line $1</span>').replace(/\n/g, '<br>');
@@ -949,7 +949,8 @@ class ICSCompiler {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, (m) => map[m]);
+        // First escape HTML characters, then convert newlines to <br> tags
+        return text.replace(/[&<>"']/g, (m) => map[m]).replace(/\n/g, '<br>');
     }
     generateCSS() {
         return `:root {
@@ -1022,6 +1023,7 @@ body {
     font-weight: bold;
     margin-bottom: 10px;
     margin-left: 0px;
+    margin-top: 40px;
 }
 
 .blueprint-requires-header,
