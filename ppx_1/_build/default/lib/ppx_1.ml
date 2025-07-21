@@ -30,13 +30,6 @@ let all_fun_args_are_annotated entry_expr =
   in
   check_params entry_expr && has_return_type_annotation entry_expr
 
-  (* Note that we allow the following String functions: 
-     1. String.get s position
-     2. String.sub s start_index length
-     3. String.length s
-
-     Why? It is difficult to implement  these themselves, particularly so in timed lab-tests. 
-    *)
 let banned_always_functions : StringSet.t =
   StringSet.of_list [
     "abs"; "ignore"; "exit"; "truncate"; "Char.code"; "Char.chr";
@@ -72,15 +65,13 @@ let banned_mutable_functions : StringSet.t =
 let ppx_enforcer_rules =
   object(self)
     inherit Ast_traverse.iter as super
+    
+    (* Flag to track if we're inside a top-level function definition *)
+    val mutable in_toplevel_function = false
 
-    (* This method is now structured to handle the special context of a let-binding
-       while correctly delegating traversal to the other methods. *)
     method! structure_item stri =
       match stri.pstr_desc with
       | Pstr_value (rec_flag, bindings) ->
-          (* We handle Pstr_value manually to distinguish top-level functions
-             from lambdas, but we must be careful to visit every child node
-             by calling the appropriate traversal methods like self#expression. *)
           self#rec_flag rec_flag;
           List.iter (fun vb ->
             self#attributes vb.pvb_attributes;
@@ -101,38 +92,32 @@ let ppx_enforcer_rules =
                 Location.raise_errorf ~loc:vb.pvb_loc
                   "Functions must have type annotations on all parameters and on the return type.";
 
-              (* 2. IMPORTANT: Traverse the expression. This will check the body of the function
-                 for any violations (for-loops, banned functions, etc.). *)
+              (* 2. Set flag and traverse the function expression *)
+              in_toplevel_function <- true;
               self#expression vb.pvb_expr;
+              in_toplevel_function <- false;
             ) else (
-              (* This is not a function definition (e.g., `let x = 5` or your test case `let _ = for...`).
-                 Traverse the entire expression normally. This is the key part that fixes your bug. *)
+              (* This is not a function definition. *)
               self#expression vb.pvb_expr
             );
             self#location vb.pvb_loc
           ) bindings
 
-      (* For all other kinds of structure items (type, module, etc.), use the default behavior. *)
+      (* For all other kinds of structure items, use the default behavior. *)
       | _ -> super#structure_item stri
 
     method! expression expr =
-      (* The lambda check needs to know if it's inside a let-binding context.
-         We can't easily know that here. A simpler approach is to ban Pexp_fun
-         unless the -allow_lambdas flag is set, but be aware this will also
-         forbid top-level functions. The `structure_item` override is the
-         correct way to distinguish them. With the fix above, this lambda check
-         will now correctly only fire on *nested* lambdas. *)
       (match expr.pexp_desc with
       | Pexp_for (_, _, _, _, _) when not !allow_for_loops ->
           Location.raise_errorf ~loc:expr.pexp_loc "For-loops are not permitted."
       | Pexp_while (_, _) when not !allow_while_loops ->
           Location.raise_errorf ~loc:expr.pexp_loc "While-loops are not permitted."
-      | Pexp_fun (_, _, _, _) when not !allow_lambdas ->
+      | Pexp_fun (_, _, _, _) when not !allow_lambdas && not in_toplevel_function ->
           Location.raise_errorf ~loc:expr.pexp_loc "Lambda functions (fun keyword in expression context) are not permitted."
       | Pexp_setfield (_, _, _) when not !allow_mutability ->
           Location.raise_errorf ~loc:expr.pexp_loc "Record field mutation (record.field <- value) is not permitted."
       | Pexp_setinstvar (_, _) when not !allow_mutability ->
-    Location.raise_errorf ~loc:expr.pexp_loc "Object instance variable mutation (obj#field <- value) is not permitted."
+          Location.raise_errorf ~loc:expr.pexp_loc "Object instance variable mutation (obj#field <- value) is not permitted."
       | Pexp_ifthenelse (_, _, _) ->
           Location.raise_errorf ~loc:expr.pexp_loc "If-then-else statements are not permitted."
       | Pexp_function _ ->
@@ -159,7 +144,7 @@ let ppx_enforcer_rules =
       )
   end
 
-  let () =
+let () =
   Driver.add_arg "-allow_for_loops"
     (Set allow_for_loops)
     ~doc:"Allow for-loops to be used.";
