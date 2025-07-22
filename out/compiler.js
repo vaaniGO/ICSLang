@@ -25,801 +25,427 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ICSCompiler = void 0;
 const allowed_flags = "";
-const vscode = __importStar(require("vscode"));
+const assignment_info = "";
+// These are automatically populated to keep track of allowed features in the current assignment and code. 
+// This must be the very first line. Do not remove it. 
 const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
-const os = __importStar(require("os"));
-class ICSCompiler {
+const vscode = __importStar(require("vscode"));
+const path = __importStar(require("path"));
+class Header {
+    // below is the default constructor to only initialise keys
     constructor() {
-        const config = vscode.workspace.getConfiguration('ics');
-        let outputPath = config.get('outputPath', './output');
-        // Resolve path relative to workspace
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-            if (!path.isAbsolute(outputPath)) {
-                this.outputPath = path.resolve(workspaceRoot, outputPath);
+        this.subsections = {
+            Name: "",
+            Assignment: "",
+            Collaborators: "",
+            Date: "",
+            Professor: ""
+        };
+        this.name = "Header";
+        this.isComplete = false;
+    }
+    // Expects an array of lines already pertaining to the header only
+    parse(lines) {
+        for (const line of lines) {
+            const [key, value] = line.split(':').map(part => part.trim());
+            if (key && value) {
+                this.subsections[key] = value;
+            }
+        }
+    }
+    /**
+     * Populates the subsection values accepting them from another class
+     */
+    accept(Name, Assignment, Collaborators, Date, Professor) {
+        this.subsections = {
+            Name,
+            Assignment,
+            Collaborators,
+            Date,
+            Professor
+        };
+        if (Name && Assignment && Collaborators && Date && Professor) {
+            this.isComplete = true; // if all fields are filled, then the header is complete
+        }
+        else {
+            this.isComplete = false; // if any field is empty, then the header is not complete
+        }
+    }
+    /**
+     * Generates HTML with injected subsection values using its created Header object
+     */
+    getHTML() {
+        const { Name, Assignment, Collaborators, Date, Professor } = this.subsections;
+        return `
+        <div class="header">
+            <div class="header-title">
+                BOOP! ICS Summer 2025 | Professor <span class="professor-name">${Professor}</span>
+            </div>
+        </div>
+
+        <div class="assignment-header">
+            <div class="assignment-name">${Assignment}</div>
+            <div class="student-name">${Name}</div>
+            <div class="date">${Date}</div>
+            <div class="collaborators">${Collaborators}</div>
+        </div>`;
+    }
+}
+class functionalCorrectness {
+    constructor() {
+        this.subsections = {
+            Requires: "",
+            Ensures: ""
+        };
+        this.name = "Functional Correctness";
+        this.isComplete = false;
+    }
+    accept() { }
+    parse(lines) {
+        const len = lines.length;
+        let counter = -1;
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i];
+            if (currentLine.toLowerCase().includes("requires") || currentLine.toLowerCase().includes("ensures")) {
+                counter++;
+                this.subsections[counter] = currentLine.split(':')[1].trim();
             }
             else {
-                this.outputPath = outputPath;
+                // For e.g. counter = 0 when we are in 'requires, the moment the subsection switches, count updates and we automatically starts populating the next clause (ensures)
+                this.subsections[counter] = "\n" + currentLine;
             }
         }
-        else {
-            this.outputPath = path.resolve(process.cwd(), outputPath);
-        }
+        // If both subsections are filled, then the functional correctness section is complete
+        this.isComplete = this.subsections.Requires && this.subsections.Ensures ? true : false;
     }
-    getOutputPath(fileName) {
-        const config = vscode.workspace.getConfiguration('ics');
-        let outputPath = config.get('outputPath', './output');
-        const documentDir = path.dirname(fileName);
-        let resolvedOutputPath;
-        if (path.isAbsolute(outputPath)) {
-            resolvedOutputPath = outputPath;
-        }
-        else {
-            resolvedOutputPath = path.resolve(documentDir, outputPath);
-        }
-        const baseName = path.basename(fileName, '.ics');
-        return path.join(resolvedOutputPath, `${baseName}.html`);
-    }
-    async compile(document) {
-        try {
-            const parsed = this.parseDocument(document);
-            if (!parsed) {
-                vscode.window.showErrorMessage('Failed to parse ICS document');
-                return;
-            }
-            const html = this.generateHTML(parsed);
-            const css = this.generateCSS();
-            // Combine HTML with inline CSS - completely in memory
-            const htmlWithCSS = html.replace('</head>', `<style>${css}</style></head>`);
-            // Generate PDF output path
-            const outputFile = this.getOutputPath(document.fileName).replace(/\.html$/, '.pdf');
-            const outputDir = path.dirname(outputFile);
-            // Ensure output directory exists
-            if (!fs.existsSync(outputDir)) {
-                fs.mkdirSync(outputDir, { recursive: true });
-            }
-            // Try multiple PDF generation methods with fallbacks
-            await this.generatePDFWithFallbacks(htmlWithCSS, outputFile);
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`Compilation failed: ${errorMessage}`);
-        }
-    }
-    async generatePDFWithFallbacks(html, outputFile) {
-        // Method 1: Try Puppeteer (original method)
-        try {
-            await this.generatePDFWithPuppeteer(html, outputFile);
-            vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
-            const uri = vscode.Uri.file(outputFile);
-            vscode.env.openExternal(uri);
-            return;
-        }
-        catch (puppeteerError) {
-            console.log('Puppeteer failed, trying alternative methods...');
-        }
-        // Method 2: Try html-pdf-node
-        try {
-            await this.generatePDFWithHtmlPdfNode(html, outputFile);
-            vscode.window.showInformationMessage(`ICS compiled successfully to ${outputFile}`);
-            const uri = vscode.Uri.file(outputFile);
-            vscode.env.openExternal(uri);
-            return;
-        }
-        catch (htmlPdfError) {
-            console.log('html-pdf-node failed, trying browser fallback...');
-        }
-        // Method 3: Fallback to opening HTML in browser
-        await this.openInBrowser(html);
-    }
-    // Original Puppeteer method
-    async generatePDFWithPuppeteer(html, outputFile) {
-        const puppeteer = require('puppeteer');
-        let browser = null;
-        try {
-            // Launch Puppeteer with Chrome installation handling
-            browser = await this.launchPuppeteerWithFallback();
-            const page = await browser.newPage();
-            // Set content directly from HTML string - no temporary files
-            await page.setContent(html, {
-                waitUntil: 'networkidle0'
-            });
-            // Generate PDF directly to final location
-            await page.pdf({
-                path: outputFile,
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '20px',
-                    bottom: '20px',
-                    left: '20px',
-                    right: '20px'
-                }
-            });
-        }
-        finally {
-            if (browser) {
-                await browser.close();
-            }
-        }
-    }
-    // Alternative Method 1: html-pdf-node
-    async generatePDFWithHtmlPdfNode(html, outputFile) {
-        try {
-            const htmlPdf = require('html-pdf-node');
-            const options = {
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '20px',
-                    bottom: '20px',
-                    left: '20px',
-                    right: '20px'
-                }
-            };
-            const file = { content: html };
-            const pdfBuffer = await htmlPdf.generatePdf(file, options);
-            fs.writeFileSync(outputFile, pdfBuffer);
-        }
-        catch (error) {
-            throw new Error(`html-pdf-node generation failed: ${error}`);
-        }
-    }
-    // Alternative Method 2: Open in browser for manual PDF save
-    async openInBrowser(html) {
-        const tempPath = path.join(os.tmpdir(), `ics-temp-${Date.now()}.html`);
-        fs.writeFileSync(tempPath, html);
-        const uri = vscode.Uri.file(tempPath);
-        await vscode.env.openExternal(uri);
-        vscode.window.showInformationMessage('PDF generation failed. HTML opened in browser. Use Ctrl+P (Cmd+P on Mac) to print to PDF.', 'OK');
-        // Clean up temp file after a delay
-        setTimeout(() => {
-            try {
-                if (fs.existsSync(tempPath)) {
-                    fs.unlinkSync(tempPath);
-                }
-            }
-            catch (error) {
-                console.log('Could not clean up temp file:', error);
-            }
-        }, 30000); // 30 seconds delay
-    }
-    // Helper method to launch Puppeteer with fallback Chrome installation
-    async launchPuppeteerWithFallback() {
-        const puppeteer = require('puppeteer');
-        try {
-            // First attempt - try to launch with default settings
-            return await puppeteer.launch({
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-extensions',
-                    '--disable-plugins'
-                ]
-            });
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            if (errorMessage.includes('Could not find Chrome')) {
-                // Show progress and attempt to install Chrome
-                const installed = await this.installChromeWithProgress();
-                if (installed) {
-                    // Try launching again after installation
-                    return await puppeteer.launch({
-                        headless: true,
-                        args: [
-                            '--no-sandbox',
-                            '--disable-setuid-sandbox',
-                            '--disable-dev-shm-usage',
-                            '--disable-extensions',
-                            '--disable-plugins'
-                        ]
-                    });
-                }
-            }
-            // Re-throw the original error if we can't handle it
-            throw error;
-        }
-    }
-    // Helper method to install Chrome with progress indication
-    async installChromeWithProgress() {
-        return vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: "Installing Chrome for PDF generation",
-            cancellable: false
-        }, async (progress) => {
-            try {
-                progress.report({ increment: 0, message: "Downloading Chrome..." });
-                // Run the installation command
-                (0, child_process_1.execSync)('npx puppeteer browsers install chrome', {
-                    stdio: 'pipe',
-                    timeout: 300000 // 5 minute timeout
-                });
-                progress.report({ increment: 100, message: "Chrome installed successfully!" });
-                vscode.window.showInformationMessage('Chrome installed successfully! You can now compile ICS files to PDF.');
-                return true;
-            }
-            catch (installError) {
-                const installErrorMessage = installError instanceof Error ? installError.message : String(installError);
-                vscode.window.showErrorMessage(`Failed to install Chrome automatically: ${installErrorMessage}. ` +
-                    'Please run "npx puppeteer browsers install chrome" in your terminal.');
-                return false;
-            }
-        });
-    }
-    // Optional: Add a command to manually install Chrome
-    async installChrome() {
-        await this.installChromeWithProgress();
-    }
-    // Optional: Method to check if Chrome is available
-    async isChromeAvailable() {
-        try {
-            const puppeteer = require('puppeteer');
-            const browser = await puppeteer.launch({ headless: true });
-            await browser.close();
-            return true;
-        }
-        catch (error) {
-            return false;
-        }
-    }
-    // Optional: Add a health check command
-    async checkChromeStatus() {
-        const available = await this.isChromeAvailable();
-        if (available) {
-            vscode.window.showInformationMessage('Chrome is properly installed and ready for PDF generation.');
-        }
-        else {
-            const action = await vscode.window.showWarningMessage('Chrome is not available for PDF generation.', 'Install Chrome');
-            if (action === 'Install Chrome') {
-                await this.installChromeWithProgress();
-            }
-        }
-    }
-    parseDocument(document) {
-        const content = document.getText();
-        const lines = content.split('\n');
-        const doc = {
-            assignmentName: '',
-            studentName: '',
-            date: '',
-            collaborators: '',
-            verified: '',
-            problems: []
-        };
-        let currentProblem = null;
-        let currentSection = null;
-        let currentContent = [];
-        let inHeader = false;
-        let sectionStack = [];
-        // Helper function to completely reset problem state
-        const resetProblemState = () => {
-            currentSection = null;
-            currentContent = [];
-            sectionStack = [];
-        };
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            // Check for header section start
-            if (line === '<<header') {
-                inHeader = true;
-                continue;
-            }
-            // Check for header section end
-            if (line === 'header>>' && inHeader) {
-                inHeader = false;
-                continue;
-            }
-            // Parse header information only when inside header tags
-            if (inHeader) {
-                if (line.startsWith('assignment:')) {
-                    doc.assignmentName = line.substring(11).trim();
-                }
-                else if (line.startsWith('student:')) {
-                    doc.studentName = line.substring(8).trim();
-                }
-                else if (line.startsWith('date:')) {
-                    doc.date = line.substring(5).trim();
-                }
-                else if (line.startsWith('collaborators:')) {
-                    doc.collaborators = line.substring(14).trim();
-                }
-                else if (line.startsWith('verified:')) {
-                    doc.verified = line.substring(9).trim();
-                }
-                continue;
-            }
-            // Skip processing if we're still in header
-            if (inHeader) {
-                continue;
-            }
-            // Check for problem start
-            const problemStartMatch = line.match(/^<<problem\s+(.+)$/);
-            if (problemStartMatch) {
-                // End previous problem if exists
-                if (currentProblem) {
-                    // End current section if exists
-                    if (currentSection && sectionStack.length > 0) {
-                        this.processSectionContent(currentSection, currentContent.join('\n'));
-                        currentProblem.sections.push(currentSection);
-                    }
-                    doc.problems.push(currentProblem);
-                }
-                // Start new problem with complete state reset
-                currentProblem = {
-                    title: problemStartMatch[1].trim(),
-                    sections: []
-                };
-                resetProblemState(); // Complete reset of all section-related state
-                continue;
-            }
-            // Check for problem end
-            if (line === 'problem>>' && currentProblem) {
-                // End current section if exists
-                if (currentSection && sectionStack.length > 0) {
-                    this.processSectionContent(currentSection, currentContent.join('\n'));
-                    currentProblem.sections.push(currentSection);
-                }
-                // End current problem with complete state reset
-                doc.problems.push(currentProblem);
-                currentProblem = null;
-                resetProblemState(); // Complete reset
-                continue;
-            }
-            // Only process sections if we're inside a problem
-            if (!currentProblem) {
-                continue;
-            }
-            // Check for section start
-            const openSectionMatch = line.match(/^<<(blueprint|operational steps|ocaml code|proof|induction|invariant)(.*)$/);
-            if (openSectionMatch) {
-                const sectionName = openSectionMatch[1];
-                const remainder = openSectionMatch[2].trim();
-                // Handle nested sections like <<proof <<invariant
-                if (remainder.startsWith('<<')) {
-                    const nestedMatch = remainder.match(/^<<(invariant|induction)/);
-                    if (nestedMatch) {
-                        const nestedSection = nestedMatch[1];
-                        // End previous section if exists
-                        if (currentSection && sectionStack.length > 0) {
-                            this.processSectionContent(currentSection, currentContent.join('\n'));
-                            currentProblem.sections.push(currentSection);
-                        }
-                        // Start new proof section
-                        currentSection = {
-                            type: 'proof',
-                            content: '',
-                            subsections: {},
-                            proofType: nestedSection,
-                            proofSubsections: {}
-                        };
-                        // Clear stack and push both sections
-                        sectionStack = [];
-                        sectionStack.push({ name: sectionName, section: currentSection });
-                        sectionStack.push({ name: nestedSection, section: currentSection });
-                        currentContent = [];
-                        continue;
-                    }
-                }
-                // Check if we're already in a section and trying to open another at the top level
-                if (sectionStack.length > 0) {
-                    // End the current section before starting a new one
-                    if (currentSection) {
-                        this.processSectionContent(currentSection, currentContent.join('\n'));
-                        currentProblem.sections.push(currentSection);
-                    }
-                    // Reset section state
-                    currentSection = null;
-                    currentContent = [];
-                    sectionStack = [];
-                }
-                // Handle regular section opening
-                sectionStack.push({ name: sectionName, section: null });
-                // If this is a nested section, don't create a new section
-                if (sectionStack.length > 1) {
-                    if (sectionName === 'invariant' && currentSection?.type === 'proof') {
-                        currentSection.proofType = 'invariant';
-                        currentSection.proofSubsections = {};
-                    }
-                    else if (sectionName === 'induction' && currentSection?.type === 'proof') {
-                        currentSection.proofType = 'induction';
-                        currentSection.proofSubsections = {};
-                    }
-                }
-                else {
-                    // Start new section (we already ended the previous one above if needed)
-                    let sectionType;
-                    if (sectionName === 'operational steps') {
-                        sectionType = 'operational_steps';
-                    }
-                    else if (sectionName === 'ocaml code') {
-                        sectionType = 'ocaml_code';
-                    }
-                    else if (sectionName === 'proof' || sectionName === 'induction' || sectionName === 'invariant') {
-                        sectionType = 'proof';
-                    }
-                    else {
-                        sectionType = sectionName;
-                    }
-                    currentSection = {
-                        type: sectionType,
-                        content: '',
-                        subsections: {}
-                    };
-                    if (sectionName === 'induction' || sectionName === 'invariant') {
-                        currentSection.proofType = sectionName;
-                        currentSection.proofSubsections = {};
-                    }
-                    sectionStack[sectionStack.length - 1].section = currentSection;
-                    currentContent = [];
-                }
-                continue;
-            }
-            // Check for section end
-            const closeSectionMatch = line.match(/^(blueprint|operational steps|ocaml code|proof|induction|invariant)>>$/);
-            if (closeSectionMatch) {
-                const closingSectionName = closeSectionMatch[1];
-                // Only process if we have an active section stack
-                if (sectionStack.length === 0) {
-                    // Skip orphaned closing tags
-                    continue;
-                }
-                // Find the matching opening section in the stack
-                let foundIndex = -1;
-                for (let j = sectionStack.length - 1; j >= 0; j--) {
-                    if (sectionStack[j].name === closingSectionName) {
-                        foundIndex = j;
-                        break;
-                    }
-                }
-                if (foundIndex !== -1) {
-                    // Remove all sections from the found index onwards
-                    sectionStack.splice(foundIndex);
-                    // If we're closing the outermost section, end the main section
-                    if (sectionStack.length === 0) {
-                        if (currentSection) {
-                            this.processSectionContent(currentSection, currentContent.join('\n'));
-                            currentProblem.sections.push(currentSection);
-                        }
-                        currentSection = null;
-                        currentContent = [];
-                    }
-                }
-                continue;
-            }
-            // Add line to current section content
-            if (sectionStack.length > 0) {
-                currentContent.push(lines[i]);
-            }
-        }
-        // Handle case where document ends without proper closing
-        if (currentProblem) {
-            // End current section if exists
-            if (currentSection && sectionStack.length > 0) {
-                this.processSectionContent(currentSection, currentContent.join('\n'));
-                currentProblem.sections.push(currentSection);
-            }
-            doc.problems.push(currentProblem);
-        }
-        return doc;
-    }
-    processSectionContent(section, content) {
-        section.content = content;
-        switch (section.type) {
-            case 'blueprint':
-                this.parseBlueprint(section, content);
-                break;
-            case 'proof':
-                this.parseProof(section, content);
-                break;
-            case 'operational_steps':
-                this.parseOperationalSteps(section, content);
-                break;
-            case 'ocaml_code':
-                this.parseOcamlCode(section, content);
-                break;
-        }
-    }
-    parseBlueprint(section, content) {
-        section.subsections = {};
-        const lines = content.split('\n');
-        let currentSubsection = null;
-        let currentContent = [];
-        for (const line of lines) {
-            const trimmed = line.trim().toLowerCase();
-            if (trimmed === 'requires:') {
-                if (currentSubsection) {
-                    section.subsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'requires';
-                currentContent = [];
-            }
-            else if (trimmed === 'ensures:') {
-                if (currentSubsection) {
-                    section.subsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'ensures';
-                currentContent = [];
-            }
-            else if (currentSubsection) {
-                currentContent.push(line);
-            }
-        }
-        if (currentSubsection) {
-            section.subsections[currentSubsection] = currentContent.join('\n').trim();
-        }
-    }
-    parseOperationalSteps(section, content) {
-        section.subsections = {};
-        const lines = content.split('\n');
-        let currentStep = null;
-        let currentContent = [];
-        for (const line of lines) {
-            // Skip empty lines and section markers
-            if (!line.trim() || line.trim().startsWith('<<') || line.trim().endsWith('>>')) {
-                continue;
-            }
-            const stepMatch = line.match(/^step (\d+):/i);
-            if (stepMatch) {
-                // Save previous step if exists
-                if (currentStep) {
-                    section.subsections[currentStep] = currentContent.join('\n').trim();
-                }
-                currentStep = `step-${stepMatch[1]}`;
-                // Get content after the colon
-                const afterColon = line.substring(line.indexOf(':') + 1).trim();
-                currentContent = afterColon ? [afterColon] : [];
-            }
-            else if (currentStep) {
-                // Add line to current step content
-                currentContent.push(line);
-            }
-        }
-        // Save the last step
-        if (currentStep) {
-            section.subsections[currentStep] = currentContent.join('\n').trim();
-        }
-    }
-    parseProof(section, content) {
-        section.subsections = {};
-        section.proofSubsections = {};
-        if (section.proofType === 'invariant') {
-            this.parseInvariantProof(section, content);
-        }
-        else if (section.proofType === 'induction') {
-            this.parseInductionProof(section, content);
-        }
-        else {
-            // Try to determine proof type from content
-            if (content.toLowerCase().includes('invariant')) {
-                section.proofType = 'invariant';
-                this.parseInvariantProof(section, content);
-            }
-            else if (content.toLowerCase().includes('induction')) {
-                section.proofType = 'induction';
-                this.parseInductionProof(section, content);
-            }
-        }
-    }
-    parseInvariantProof(section, content) {
-        const lines = content.split('\n');
-        let currentSubsection = null;
-        let currentContent = [];
-        for (const line of lines) {
-            // Skip section markers
-            if (line.trim().startsWith('<<') || line.trim().endsWith('>>')) {
-                continue;
-            }
-            const trimmed = line.trim().toLowerCase();
-            if (trimmed.startsWith('invariant condition:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'invariant-condition';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            }
-            else if (trimmed.startsWith('pre-condition:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'pre-condition';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            }
-            else if (trimmed.startsWith('after the ith iteration:') || trimmed.startsWith('after the ith step:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'ith-condition';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            }
-            else if (trimmed.startsWith('After the after the (i+1)th iteration:') || trimmed.startsWith('after the (i+1)th step:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'i-1th-condition';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            }
-            else if (trimmed.startsWith('post-condition:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'post-condition';
-                currentContent = [line.substring(line.indexOf(':') + 1).trim()];
-            }
-            else if (currentSubsection && trimmed) {
-                currentContent.push(line);
-            }
-        }
-        if (currentSubsection) {
-            section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-        }
-    }
-    parseInductionProof(section, content) {
-        const lines = content.split('\n');
-        let currentSubsection = null;
-        let currentContent = [];
-        for (const line of lines) {
-            // Skip section markers
-            if (line.startsWith('<<') || line.endsWith('>>')) {
-                continue;
-            }
-            const trimmed = line.toLowerCase();
-            if (trimmed.startsWith('base case:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'base-case';
-                const afterColon = line.substring(line.indexOf(':') + 1).trim();
-                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
-            }
-            else if (trimmed.startsWith('induction hypothesis:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'induction-hypothesis';
-                const afterColon = line.substring(line.indexOf(':') + 1).trim();
-                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
-            }
-            else if (trimmed.startsWith('inductive step:')) {
-                if (currentSubsection) {
-                    section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-                }
-                currentSubsection = 'inductive-step';
-                const afterColon = line.substring(line.indexOf(':') + 1).trim();
-                currentContent = afterColon ? [afterColon] : []; // Only add if there's content after colon
-            }
-            else if (currentSubsection && trimmed) {
-                currentContent.push(line);
-            }
-        }
-        if (currentSubsection) {
-            section.proofSubsections[currentSubsection] = currentContent.join('\n').trim();
-        }
-    }
-    parseOcamlCode(section, content) {
-        // OCaml code doesn't need special parsing, just store the content
-        section.content = content.trim();
-    }
-    generateHTML(doc) {
-        return `<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="boop.css">
-    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
-    <title>ICS Document</title>
-</head>
-
-<body>
-    <div class="header">
-        <div class="header-title">BOOP! ICS Summer 2025 | Professor Aalok Thakkar</div>
-        <img class="header-img" src="boop.png">
-    </div>
-    
-    <div class="assignment-header">
-        <div class="assignment-name">${doc.assignmentName}</div>
-        <div class="student-name">${doc.studentName}</div>
-        <div class="date">${doc.date}</div>
-        <div class="collaborators">Collaborators: ${doc.collaborators}</div>
-    </div>
-
-    <div class="document-content">
-        ${doc.problems.map(problem => this.generateProblemHTML(problem)).join('\n')}
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ocaml.min.js"></script>
-</body>
-
-</html>`;
-    }
-    generateProblemHTML(problem) {
-        return `    <div class="problem">
-        <div class="problem-title">${problem.title}</div>
-        ${problem.sections.map(section => this.generateSectionHTML(section)).join('\n')}
-    </div>`;
-    }
-    generateSectionHTML(section) {
-        switch (section.type) {
-            case 'blueprint':
-                return this.generateBlueprintHTML(section);
-            case 'operational_steps':
-                return this.generateOperationalStepsHTML(section);
-            case 'ocaml_code':
-                return this.generateOCamlCodeHTML(section);
-            case 'proof':
-                return this.generateProofHTML(section);
-            default:
-                return '';
-        }
-    }
-    generateBlueprintHTML(section) {
-        let html = `        <div class="section">
-            <div class="blueprint-header section-header">BLUEPRINT</div>
-            <div class="blueprint">`;
-        if (section.subsections?.requires) {
-            html += `
-                <div class="blueprint-requires sub-section">
+    getHTML() {
+        return `<div class="blueprint-requires sub-section">
                     <span class="blueprint-requires-header">Requires: </span> <br>
-                    ${this.formatLines(section.subsections.requires)}
-                </div>`;
-        }
-        if (section.subsections?.ensures) {
-            html += `
+                    ${this.subsections.Requires}
+                </div>
                 <div class="blueprint-ensures sub-section">
                     <span class="blueprint-ensures-header">Ensures: </span> <br>
-                    ${this.formatLines(section.subsections.ensures)}
+                    ${this.subsections.Ensures}
                 </div>`;
-        }
-        html += `
-            </div>
-        </div>`;
-        return html;
     }
-    generateOperationalStepsHTML(section) {
-        let html = `        <div class="section">
-            <div class="operational-steps-header section-header">OPERATIONAL STEPS</div>
-            <div class="operational-steps">`;
-        if (section.subsections) {
-            const sortedSteps = Object.keys(section.subsections)
-                .filter(key => key.startsWith('step-'))
-                .sort((a, b) => {
-                const aNum = parseInt(a.split('-')[1]);
-                const bNum = parseInt(b.split('-')[1]);
-                return aNum - bNum;
-            });
-            for (const stepKey of sortedSteps) {
-                const stepNum = stepKey.split('-')[1];
-                const stepContent = section.subsections[stepKey];
-                html += `
-                <div class="step sub-section" id="step-${stepNum}">
-                    <span class="step-header">Step ${stepNum}: </span> <br>
-                    ${this.escapeHtml(stepContent)}
-                </div>`;
+}
+class Complexity {
+    constructor() {
+        this.subsections = {
+            Time: "",
+            Space: ""
+        };
+        this.name = "Complexity";
+        this.isComplete = false;
+        this.title = "";
+        this.HTML = "";
+    }
+    accept(title) {
+        this.title = title.trim();
+    }
+    // Parses the content of the Complexity section and updates the object fields accordingly
+    parse(lines) {
+        let len = lines.length;
+        for (let i = 0; i < len; i++) {
+            const [key, value] = lines[i].split(':').map(part => part.trim());
+            if (key && value) {
+                this.subsections[key] = value;
             }
         }
-        html += `
-            </div>
-        </div>`;
-        return html;
+        // Only time complexity is required, the other is optional
+        this.isComplete = this.subsections.TimeComplexity ? true : false;
     }
-    generateOCamlCodeHTML(section) {
-        let ocaml_code = section.content.trim();
-        let status = "";
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Complexity section
+        return `
+            <div class="time-complexity sub-section">
+                <span class="time-complexity-header">Time Complexity: </span> <br>
+                ${this.subsections.TimeComplexity}
+            </div>
+            <div class="space-complexity sub-section">
+                <span class="space-complexity-header">Space Complexity: </span> <br>
+                ${this.subsections.SpaceComplexity}
+            </div>`;
+    }
+}
+class I_o {
+    constructor() {
+        this.subsections = {
+            Input: [],
+            Output: []
+        };
+        this.name = "Input-Output";
+        this.isComplete = false;
+    }
+    // Parses the content of the Input-Output section and updates the object fields accordingly
+    parse(lines) {
+        const len = lines.length;
+        let currentSection = "";
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i].trim();
+            if (currentLine.toLowerCase().includes("input")) {
+                // Require that an input must be followed by an output and no duplication.
+                if (currentSection == "Input") {
+                    vscode.window.showErrorMessage("Input section is already open. Please close it before opening a new one.");
+                    return;
+                }
+                currentSection = "Input";
+            }
+            else if (currentLine.toLowerCase().includes("output")) {
+                if (currentSection == "Output") {
+                    vscode.window.showErrorMessage("Output section is already open. Please close it before opening a new one.");
+                    return;
+                }
+                currentSection = "Output";
+            }
+            else if (currentSection) {
+                this.subsections[currentSection].push(currentLine);
+            }
+        }
+        // If both subsections are filled, then the input-output section is complete
+        this.isComplete = this.subsections.Input.length > 0 && this.subsections.Output.length > 0;
+    }
+    accept() { }
+    generate_i_o_HTML() {
+        const len = this.subsections.Input.length;
+        if (len != this.subsections.Output.length) {
+            vscode.window.showErrorMessage("Every Input must have a corresponding Output and vice versa.");
+            return "";
+        }
+        let HTML = "";
+        for (let i = 0; i < len; i++) {
+            HTML += `<span class="blueprint-input-header">Input: </span> <br> <span class="input-item">${this.subsections.Input[i]}<br></span>`;
+            HTML += `<span class="blueprint-output-header">Output: </span> <br> <span class="input-item">${this.subsections.Output[i]}<br></span>`;
+        }
+        return HTML;
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Input-Output section
+        return `<div class="blueprint-input-output sub-section">
+                    ${this.generate_i_o_HTML}
+                </div>`;
+    }
+}
+class Blueprint {
+    constructor() {
+        this.subsections = {
+            'fc': new functionalCorrectness(),
+            'i_o': new I_o(),
+            'complexity': new Complexity(),
+        };
+        this.type = "any"; // Type is any unless modified by instructor-given type
+        this.name = "Blueprint";
+        this.HTML = "";
+        this.isComplete = false;
+    }
+    // Function below is used to update the instruction given type
+    accept(type) {
+        this.type = type;
+    }
+    // Takes in a string line and checks if it matches the type of the blueprint
+    // Type any means there will never be a type mismatch
+    typeMismatch(line) {
+        if (this.type == "any")
+            return false;
+        // We want to see if the line contains an opening keyword that is not allowed by the type of the blueprint
+        line = line.split(":")[1].toLowerCase();
+        if (((line.includes("requires") || line.includes("ensures")) && this.type != "r-e")
+            || (line.includes("input") || line.includes("output")) && this.type != "i-o") {
+            return false;
+        }
+        return true;
+    }
+    /**
+     * The new format of writing blueprint is:
+     * <<bluerpint
+     * <<functional-correctness
+     * Requires: <requires clause>
+     * Ensures: <ensures clause>
+     * functional-correctness>>
+     *
+     * <<input-output
+     * Input: <input>
+     * Output: <output>
+     * Input: <another input>
+     * Output: <another output>
+     * input-output>>
+     *
+     * <<complexity
+     * Time: <time complexity>
+     * Space: <space complexity>
+     * complexity>>
+     * blueprint>>
+     *
+     * Which of these are required / not required is on instructor discretion.
+     */
+    parse(lines) {
+        let len = lines.length;
+        const fcOpenRegex = /<<\s*functional-correctness\s*/i;
+        const i_oOpenRegex = /<<\s*input-output\s*/i;
+        const complexityOpenRegex = /<<\s*complexity\s*/i;
+        const fcCoseRegex = /^\s*functional-correctness\s*>>$/i;
+        const i_oCloseRegex = /^\s*input-output\s*>>$/i;
+        const complexityCloseRegex = /^\s*complexity\s*>>$/i;
+        for (let i = 0; i < len; i++) {
+            let currentLine = lines[i];
+            let currentLineLower = currentLine.toLowerCase().trim();
+            // Stop parsing if there is a type mismatch. Individual checks are not further required.
+            if (this.typeMismatch(currentLine)) {
+                vscode.window.showErrorMessage(`Blueprint section type mismatch: ${currentLine}`);
+                return;
+            }
+            // Check if the line starts with a keyword. If it does, create an object of the required section and let the class handle the rest
+            if (fcOpenRegex.test(currentLineLower)) {
+                let functionalCorrectnessContent = [];
+                let functionalCorrectnessClosed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (fcCoseRegex.test(lines[j].toLowerCase())) {
+                        functionalCorrectnessClosed = true;
+                        break;
+                    }
+                    functionalCorrectnessContent.push(lines[j]);
+                    if (functionalCorrectnessClosed) {
+                        this.subsections['fc'].parse(functionalCorrectnessContent);
+                        i = j; // Skip the lines that were parsed
+                        this.HTML += this.subsections['fc'].getHTML() + "\n";
+                    }
+                    else {
+                        vscode.window.showErrorMessage("Functional Correctness section is not closed properly.");
+                        return;
+                    }
+                }
+            }
+            else if (i_oOpenRegex.test(currentLineLower)) {
+                let i_o_content = [];
+                let i_o_closed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (i_oCloseRegex.test(lines[j].toLowerCase())) {
+                        i_o_closed = true;
+                        break;
+                    }
+                    i_o_content.push(lines[j]);
+                }
+                if (i_o_closed) {
+                    this.subsections['i_o'].parse(i_o_content);
+                    i = j;
+                    this.HTML += this.subsections['i_o'].getHTML() + "\n";
+                }
+                else {
+                    vscode.window.showErrorMessage("Input section is not closed properly.");
+                    return;
+                }
+            }
+            else if (complexityOpenRegex.test(currentLineLower)) {
+                let complexityContent = [];
+                let complexityClosed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (complexityCloseRegex.test(lines[j].toLowerCase())) {
+                        complexityClosed = true;
+                        break;
+                    }
+                    complexityContent.push(lines[j]);
+                }
+                if (complexityClosed) {
+                    this.subsections['complexity'].parse(complexityContent);
+                    i = j;
+                    this.HTML += this.subsections['complexity'].getHTML() + "\n";
+                }
+                else {
+                    vscode.window.showErrorMessage("Complexity section is not closed properly.");
+                    return;
+                }
+            }
+            // It is complete if at least one of the subsections is complete
+            // Type mismatch checks have already been done so if a section is complete it means it obeys the type, and if a section is incomplete it does not obey the type
+            this.isComplete = this.subsections['fc'].isComplete || this.subsections['i_o'].isComplete || this.subsections['complexity'].isComplete;
+        }
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Blueprint section
+        return `<div class="section"> <div class="blueprint">
+        ${this.HTML}
+                </div>
+                </div>`;
+    }
+}
+class OperationalSteps {
+    constructor() {
+        this.subsections = {
+            Steps: []
+        };
+        this.name = "Operational Steps";
+        this.isComplete = false;
+    }
+    // Parses a given set of lines and populates the object field
+    // The input is expected to be an array of strings, each representing a line in the Operational Steps section
+    parse(lines) {
+        const stepMatchRegex = /^\s*step\s*:\s*(.*)$/i;
+        let len = lines.length;
+        this.isComplete = len > 0;
+        let currentStep = 0;
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i];
+            // Every line is either the opening of a new step, or a continuation of the previous step
+            if (stepMatchRegex.test(currentLine))
+                currentStep++;
+            else
+                this.subsections.Steps[currentStep] += "\n" + currentLine;
+        }
+    }
+    // This method is not used currently because ops does not have any attributes like title, no.
+    accept(steps) {
+    }
+    // This method generates HTML for a single step, with the step number
+    getStepHTML(step, index) {
+        return `<div class="step" id="step-${index}" >
+                    <span class="step-number">Step ${index + 1}:</span>
+                    <span class="step-content">${step}</span>
+                </div>`;
+    }
+    getHTML() {
+        // Generate HTML for all steps
+        const stepsHTML = this.subsections.Steps.map((step, index) => this.getStepHTML(step, index)).join("");
+        return `<div class="section">
+        <div class="operational-steps">
+                    <div class="operational-steps-content sub-section">
+                        <span class="operational-steps-header">Steps: </span> <br>`
+            + stepsHTML +
+            `</div></div></div>`;
+    }
+}
+class ocamlCode {
+    constructor() {
+        this.subsections = {
+            Code: "",
+            Status: ""
+        };
+        this.name = "Code";
+        this.isComplete = false;
+        this.HTML = "";
+    }
+    // Unused and empty function because the code field does not have any attributes like title, no. 
+    accept(lines) {
+    }
+    // Sets the code content for the object and sends it to verify which verifies it and sets the status accordingly.
+    parse(codeLines) {
+        this.subsections.Code = codeLines.join("\n").trim();
+        // If the code is not empty, then the section is complete
+        this.isComplete = this.subsections.Code.length > 0;
+        this.ocamlVerify();
+    }
+    // Updates the 'status' subsection appropriately based on the status of the code.
+    // Assumes that the code content has already been populated
+    ocamlVerify() {
         const ppxDir = path.resolve(__dirname, '../../ICSLang/ppx_1');
         const tempDir = ppxDir;
         if (!fs.existsSync(tempDir))
             fs.mkdirSync(tempDir, { recursive: true });
         const tempFile = path.join(ppxDir, `section_${Date.now()}.ml`);
-        fs.writeFileSync(tempFile, ocaml_code);
+        fs.writeFileSync(tempFile, this.subsections.Code, 'utf8');
         try {
             const result = (0, child_process_1.execSync)(`eval $(opam env)
         dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`, {
@@ -827,11 +453,11 @@ class ICSCompiler {
                 stdio: 'pipe',
                 cwd: ppxDir
             });
-            status = "Verified";
+            this.subsections.Status = "ICS Verified";
         }
         catch (err) {
             console.error(err.stderr || err.message);
-            status = "Failed";
+            this.subsections.Status = "ICS Failed";
             vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR`);
         }
         finally {
@@ -840,117 +466,482 @@ class ICSCompiler {
                 fs.unlinkSync(tempFile);
             }
         }
-        return `        <div class="section">
-    <div class="ocaml-code-header section-header">OCAML CODE
-    </div>
-    <div class="ocaml-code">
-    <div class="code-${status}">ICS Check: ${status}</div>
-        <div class="code sub-section">
-            <pre class="line-numbers"><code class="language-ocaml">${this.escapeHtml(section.content)}</code></pre>
-        </div>
-    </div>
-</div>`;
     }
-    generateProofHTML(section) {
-        let html = `        <div class="section">
-            <div class="proof-header section-header">PROOF</div>
-            <div class="proof">`;
-        if (section.proofType === 'invariant') {
-            html += `
-                <div class="proof-sub-header section-header">INVARIANT</div>`;
-            if (section.proofSubsections) {
-                // Invariant condition
-                if (section.proofSubsections['invariant-condition']) {
-                    html += `
-                <div class="invariant inv-condition">
-                    <span class="invariant-header">Invariant Condition: </span> <br>
-                    ${this.formatLines(section.proofSubsections['invariant-condition'])}
-                </div>`;
-                }
-                // Pre-condition
-                if (section.proofSubsections['pre-condition']) {
-                    html += `
-                <div class="invariant pre-condition sub-section">
-                    <span class="invariant-header">Pre-condition: </span> <br>
-                    ${this.formatLines(section.proofSubsections['pre-condition'])}
-                </div>`;
-                }
-                // After ith iteration
-                if (section.proofSubsections['ith-condition']) {
-                    html += `
-                <div class="invariant ith-condition">
-                    <span class="invariant-header">After the ith iteration: </span> <br>
-                    ${this.formatLines(section.proofSubsections['ith-condition'])}
-                </div>`;
-                }
-                // After after the (i+1)th stepth iteration
-                if (section.proofSubsections['i-1th-condition']) {
-                    html += `
-                <div class="invariant i-1th-condition">
-                    <span class="invariant-header">After the after the (i+1)th iteration: </span> <br>
-                    ${this.formatLines(section.proofSubsections['i-1th-condition'])}
-                </div>`;
-                }
-                // Post-condition
-                if (section.proofSubsections['post-condition']) {
-                    html += `
-                <div class="invariant post-condition">
-                    <span class="invariant-header">Post-condition: </span> <br>
-                    ${this.formatLines(section.proofSubsections['post-condition'])}
-                </div>`;
-                }
-            }
-        }
-        else if (section.proofType === 'induction') {
-            html += `
-                <div class="proof-sub-header section-header">INDUCTION</div>`;
-            if (section.proofSubsections) {
-                // Base case
-                if (section.proofSubsections['base-case']) {
-                    html += `
-                <div class="induction base-case sub-section">
-                    <span class="invariant-header">Base Case: </span> <br>
-                    ${this.formatLines(section.proofSubsections['base-case'])}
-                </div>`;
-                }
-                // Induction hypothesis
-                if (section.proofSubsections['induction-hypothesis']) {
-                    html += `
-                <div class="induction induction-hypothesis sub-section">
-                    <span class="invariant-header">Induction Hypothesis: </span> <br>
-                    ${this.formatLines(section.proofSubsections['induction-hypothesis'])}
-                </div>`;
-                }
-                // Inductive step
-                if (section.proofSubsections['inductive-step']) {
-                    html += `
-                <div class="induction inductive-step sub-section">
-                    <span class="invariant-header">Inductive Step: </span> <br>
-                    ${this.formatLines(section.proofSubsections['inductive-step'])}
-                </div>`;
-                }
-            }
-        }
-        html += `
-            </div>
-        </div>`;
-        return html;
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Code section
+        return `<div class="section">
+                <div class="ocaml-code-header section-header">OCAML CODE</div>
+                <div class="ocaml-code">
+                <div class="code-status>${this.subsections.Status}</div?
+                    <div class="code sub-section">
+                        <pre class="line-numbers"><code class="language-ocaml">
+                        ${this.subsections.Code}</code></pre>
+                    </div>
+                </div>
+            </div>`;
     }
-    formatLines(content) {
-        // Format line references
-        const lineRefRegex = /line (\d+)/g;
-        return this.escapeHtml(content).replace(lineRefRegex, '<span class="line-ref">line $1</span>').replace(/\n/g, '<br>');
-    }
-    escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
+}
+class Induction {
+    constructor() {
+        this.subsections = {
+            BaseCase: "",
+            InductiveHypothesis: "",
+            InductiveStep: ""
         };
-        // First escape HTML characters, then convert newlines to <br> tags
-        return text.replace(/[&<>"']/g, (m) => map[m]).replace(/\n/g, '<br>');
+        this.name = "Induction";
+        this.isComplete = false;
+        this.HTML = "";
+    }
+    // Parses lines to populate the subsection fields of the object
+    parse(lines) {
+        // This method parses the content of the Induction section
+        const len = lines.length;
+        for (let i = 0; i < len; i++) {
+            const [key, value] = lines[i].split(':').map(part => part.trim());
+            if (key && value) {
+                this.subsections[key] = value;
+            }
+        }
+        // If all subsections are filled, then the induction section is complete
+        this.isComplete = this.subsections.BaseCase && this.subsections.InductiveHypothesis &&
+            this.subsections.InductiveStep ? true : false;
+    }
+    // The below function is not currently used.
+    accept(BaseCase, InductiveHypothesis, InductiveStep) {
+        this.subsections = {
+            BaseCase,
+            InductiveHypothesis,
+            InductiveStep
+        };
+        // If all subsections are filled, then the induction section is complete
+        this.isComplete = BaseCase && InductiveHypothesis && InductiveStep ? true : false;
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Induction section
+        return `<div class="section">
+                <div class="induction-header section-header">INDUCTION</div>
+                <div class="induction">
+                    <div class="base-case sub-section">
+                        <span class="base-case-header">Base Case: </span> <br>
+                        ${this.subsections.BaseCase}
+                    </div>
+                    <div class="inductive-hypothesis sub-section">
+                        <span class="inductive-hypothesis-header">Inductive Hypothesis: </span> <br>
+                        ${this.subsections.InductiveHypothesis}
+                    </div>
+                    <div class="inductive-step sub-section">
+                        <span class="inductive-step-header">Inductive Step: </span> <br>
+                        ${this.subsections.InductiveStep}
+                    </div>
+                </div>
+            </div>`;
+    }
+}
+class Invariant {
+    constructor() {
+        this.subsections = {
+            Initialisation: "",
+            Maintenance: "",
+            Termination: ""
+        };
+        this.name = "Invariant";
+        this.isComplete = false;
+        this.HTML = "";
+    }
+    // The below function parses lines to populate the subsection fields of the object
+    parse(lines) {
+        // This method parses the content of the Invariant section
+        const len = lines.length;
+        for (let i = 0; i < len; i++) {
+            const [key, value] = lines[i].split(':').map(part => part.trim());
+            if (key && value) {
+                this.subsections[key] = value;
+            }
+        }
+        // If all subsections are filled, then the invariant section is complete
+        this.isComplete = this.subsections.Initialisation && this.subsections.Maintenance &&
+            this.subsections.Termination ? true : false;
+    }
+    // The below function is not currently used
+    accept(Initialisation, Maintenance, Termination) {
+        this.subsections = {
+            Initialisation,
+            Maintenance,
+            Termination
+        };
+        // If both subsections are filled, then the invariant section is complete
+        this.isComplete = Initialisation && Maintenance && Termination ? true : false;
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Invariant section
+        return `<div class="section">
+                <div class="invariant-header section-header">INVARIANT</div>
+                <div class="invariant">
+                    <div class="invariant initialisation sub-section">
+                        <span class="invariant-initialisation">Invariant Statement: </span> <br>
+                        ${this.subsections.Initialisation}
+                    </div>
+                    <div class="invariant maintenance sub-section">
+                        <span class="invariant-maintenance">Maintenance: </span> <br>
+                        ${this.subsections.Maintenance}
+                    </div>
+                    <div class="invariant termination sub-section">
+                        <span class="invariant-termination">Termination: </span> <br>
+                        ${this.subsections.Termination}
+                    </div>
+                </div>
+            </div>`;
+    }
+}
+// Includes support for a helper proof, proof with title, proof with induction, proof with loop invariant
+class Proof {
+    constructor() {
+        this.isHelper = false;
+        this.title = "";
+        this.subsections = {
+            Induction: new Induction(),
+            Invariant: new Invariant()
+        };
+        this.name = "Proof";
+        this.isComplete = false;
+        this.HTML = "";
+    }
+    // Populates the two basic (and optional for the user) fields of the Proof section
+    accept(isHelper, title) {
+        this.isHelper = isHelper;
+        this.title = title;
+    }
+    parse(lines) {
+        const inductionOpenRegex = /<<\s*induction\s*:/i;
+        const inductionCloseRegex = /^\s*induction\s*>>$/i;
+        const invariantOpenRegex = /<<\s*invariant\s*:/i;
+        const invariantCloseRegex = /^\s*invariant\s*>>$/i;
+        const len = lines.length;
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i];
+            // Parse the content of each subsection based on the line
+            if (inductionOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const inductionContent = [];
+                let inductionClosed = false;
+                for (let j = i + 1; j < len; j++) {
+                    if (inductionCloseRegex.test(lines[j])) {
+                        inductionClosed = true;
+                        break;
+                    }
+                    inductionContent.push(lines[j]);
+                }
+                if (inductionClosed) {
+                    this.parse(inductionContent);
+                }
+                else {
+                    vscode.window.showErrorMessage("Induction section is not closed properly.");
+                }
+            }
+            else if (invariantOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const invariantContent = [];
+                let invariantClosed = false;
+                for (let j = i + 1; j < len; j++) {
+                    if (invariantCloseRegex.test(lines[j])) {
+                        invariantClosed = true;
+                        break;
+                    }
+                    invariantContent.push(lines[j]);
+                }
+                if (invariantClosed) {
+                    this.parse(invariantContent);
+                }
+                else {
+                    vscode.window.showErrorMessage("Invariant section is not closed properly.");
+                }
+            }
+        }
+    }
+    // The below methods accept Invariant / Induction content and update the respective subsection objects
+    // acceptInductionContent(
+    //     BaseCase: string,
+    //     InductiveHypothesis: string,
+    //     InductiveStep: string
+    // ): void {
+    //     const induction = new Induction();
+    //     induction.acceptSubsectionContent(BaseCase, InductiveHypothesis, InductiveStep);
+    //     this.subsections.Induction = induction;
+    //     this.isComplete = true;
+    // }
+    // accept(
+    //     Initialisation: string,
+    //     Maintenance: string,
+    //     Termination: string
+    // ): void {
+    //     const invariant = new Invariant();
+    //     invariant.acceptSubsectionContent(Initialisation, Maintenance, Termination);
+    //     this.subsections.Invariant = invariant;
+    //     this.isComplete = true;
+    // }
+    getHTML() {
+        if (this.subsections.Induction.isComplete) {
+            return `<div class="section">
+                <div class="proof-header section-header">PROOF</div>
+                <div class="proof">
+                    <div class="proof-content sub-section">
+                        ${this.subsections.Induction}
+                    </div>
+                </div>
+            </div>`;
+        }
+        else if (this.subsections.Invariant.isComplete) {
+            // This method should be implemented to return the HTML representation of the Proof section
+            return `<div class="section">
+                <div class="proof-header section-header">PROOF</div>
+                <div class="proof">
+                    <div class="proof-content sub-section">
+                        ${this.subsections.Invariant}
+                    </div>
+                </div>
+            </div>`;
+        }
+        return "";
+    }
+}
+class textAnswer {
+    constructor() {
+        this.subsections = {
+            Answer: ""
+        };
+        this.name = "Text Answer";
+        this.title = "";
+        this.isComplete = false;
+    }
+    // Accepts the answer content and updates the object fields accordingly
+    accept(title) {
+        this.subsections.Answer = title.trim();
+    }
+    parse(lines) {
+        // This method parses the content of the Text Answer section
+        this.subsections.Answer = lines.join("\n").trim();
+        // If the answer is not empty, then the section is complete
+        this.isComplete = this.subsections.Answer.length > 0;
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Text Answer section
+        return `<div class="section">
+                <div class="text-answer-header section-header">TEXT ANSWER</div>
+                <div class="text-answer">
+                    <div class="text-answer-content sub-section">
+                        ${this.subsections.Answer}
+                    </div>
+                </div>
+            </div>`;
+    }
+}
+/**
+ * Optional sections depending on instructor discretion:
+ * (1) Blueprint
+ * (2) Operational Steps
+ * (3) OCaml Code
+ * (4) Proof
+ * (5) Text Answer
+ */
+class Problem {
+    constructor() {
+        this.subsections = {
+            Blueprint: new Blueprint(),
+            OperationalSteps: new OperationalSteps(),
+            Code: new ocamlCode(),
+            Proof: new Proof(),
+            Complexity: new Complexity(),
+            TextAnswer: new textAnswer()
+        };
+        this.name = "Problem";
+        this.isComplete = false;
+        this.proofHTML = "";
+        this.textAnswerHTML = "";
+        this.title = "";
+        this.number = 0;
+        this.HTML = "";
+    }
+    // This method parses the content of the Problem section, updates the objects of its subsections and the boolean to indicate whether the problem is complete
+    parse(lines) {
+        const blueprintOpenRegex = /<<\s*blueprint\s*:/i;
+        const bluePrintCloseRegex = /^\s*blueprint\s*>>$/i;
+        const operationalStepsOpenRegex = /<<\s*operational-steps\s*:/i;
+        const operationalStepsCloseRegex = /^\s*operational-steps\s*>>$/i;
+        const codeOpenRegex = /<<\s*ocaml-code\s*:/i;
+        const codeCloseRegex = /^\s*ocaml-code\s*>>$/i;
+        const proofOpenRegex = /<<\s*proof\s*:/i;
+        const proofCloseRegex = /^\s*proof\s*>>$/i;
+        const textAnswerOpenRegex = /<<\s*text-answer\s*:/i;
+        const textAnswerCloseRegex = /^\s*text-answer\s*>>$/i;
+        const len = lines.length;
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i];
+            // Parse the content of each subsection based on the line
+            // Blueprint only appears once in every problem
+            if (!this.subsections.Blueprint.isComplete && blueprintOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const blueprintContent = [];
+                let blueprintClosed = false;
+                for (let j = i + 1; j < len; j++) {
+                    if (bluePrintCloseRegex.test(lines[j])) {
+                        blueprintClosed = true;
+                        break;
+                    }
+                    blueprintContent.push(lines[j]);
+                }
+                if (blueprintClosed) {
+                    const blueprint = new Blueprint();
+                    blueprint.parse(blueprintContent);
+                    this.subsections.Blueprint = blueprint;
+                }
+                else {
+                    vscode.window.showErrorMessage("Blueprint section is not closed properly.");
+                }
+            }
+            // Operational Steps only appears once in every problem
+            else if (!this.subsections.OperationalSteps.isComplete && operationalStepsOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const operationalStepsContent = [];
+                let operationalStepsClosed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (operationalStepsCloseRegex.test(lines[j])) {
+                        operationalStepsClosed = true;
+                        break;
+                    }
+                    operationalStepsContent.push(lines[j]);
+                }
+                if (operationalStepsClosed) {
+                    const operationalSteps = this.subsections.OperationalSteps;
+                    operationalSteps.accept(operationalStepsContent);
+                    i = j;
+                }
+                else {
+                    vscode.window.showErrorMessage("Operational Steps section is not closed properly.");
+                }
+            }
+            // Ocaml code only appears once in every problem
+            else if (!this.subsections.ocaml_code.isComplete && codeOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const codeContent = [];
+                let codeClosed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (codeCloseRegex.test(lines[j])) {
+                        codeClosed = true;
+                        break;
+                    }
+                    codeContent.push(lines[j]);
+                }
+                if (codeClosed) {
+                    this.subsections.Code.parse(codeContent);
+                    i = j;
+                }
+                else {
+                    vscode.window.showErrorMessage("OCaml Code section is not closed properly.");
+                }
+            }
+            // Multiple proofs can be written in one problem
+            else if (proofOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const proofContent = [];
+                let proofClosed = false;
+                let j = i;
+                for (j = i + 1; j < len; j++) {
+                    if (proofCloseRegex.test(lines[j])) {
+                        proofClosed = true;
+                        break;
+                    }
+                    proofContent.push(lines[j]);
+                }
+                if (proofClosed) {
+                    const proof = this.subsections.Proof;
+                    // Check if the proof is a helper proof
+                    const isHelper = currentLine.includes("helper");
+                    const titleMatch = currentLine.match(/<<\s*proof\s*:\s*(.*)\s*>>/i);
+                    const title = titleMatch ? titleMatch[1].trim() : "";
+                    proof.accept(isHelper, title);
+                    proof.parse(proofContent);
+                    // Since we aren't keeping track of multiple proof objects, we collate the HTML as we go
+                    this.proofHTML += proof.getHTML() + "\n";
+                    i = j;
+                }
+                else {
+                    vscode.window.showErrorMessage("Proof section is not closed properly.");
+                }
+            }
+            else if (textAnswerOpenRegex.test(currentLine)) {
+                //Iterate to find the closing tag
+                const textAnswerContent = [];
+                let textAnswerClosed = false;
+                // Extract the title 
+                const titleMatch = currentLine.match(/<<\s*text-answer\s*:\s*(.*)\s*/i);
+                let j = i;
+                if (!titleMatch) {
+                    vscode.window.showErrorMessage("Text Answer section title is not specified.");
+                    return;
+                }
+                for (j = i + 1; j < len; j++) {
+                    if (textAnswerCloseRegex.test(lines[j])) {
+                        textAnswerClosed = true;
+                        break;
+                    }
+                    textAnswerContent.push(lines[j]);
+                }
+                if (textAnswerClosed) {
+                    this.subsections.TextAnswer.accept(titleMatch ? titleMatch[1] : "");
+                    this.subsections.TextAnswer.parse(textAnswerContent);
+                    i = j;
+                    // Since we aren't keeping track of multiple text answer objects, we collate the HTML as we go
+                    this.textAnswerHTML += this.subsections.TextAnswer.getHTML() + "\n";
+                }
+                else {
+                    vscode.window.showErrorMessage("Text Answer section is not closed properly.");
+                }
+            }
+        }
+        if ((this.subsections.Blueprint.isComplete && this.subsections.OperationalSteps.isComplete &&
+            this.subsections.Code.isComplete && this.subsections.Proof.isComplete) || this.subsections.TextAnswer.isComplete) {
+            this.isComplete = true;
+        }
+    }
+    accept(title, number) {
+        this.title = title;
+        this.number = number;
+    }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Problem section
+        return `<div class="problem">
+                    <div class="problem-title">${this.number}: ${this.title}</div>
+                    ${this.subsections.Blueprint.getHTML()}
+                    ${this.subsections.OperationalSteps.getHTML()}
+                    ${this.subsections.Code.getHTML()}
+                    ${this.proofHTML}
+                    ${this.textAnswerHTML}
+                </div>`;
+    }
+}
+class Document {
+    constructor() {
+        this.header = new Header();
+        this.header = new Header();
+        this.problems = [];
+        this.isComplete = false;
+        this.HTML = "";
+    }
+    acceptHeaderContent(Name, Assignment, Collaborators, Date, Professor) {
+        this.header.accept(Name, Assignment, Collaborators, Date, Professor);
+    }
+    acceptProblems(problems) {
+        this.problems = problems;
+        this.isComplete = this.header.isComplete && this.problems.every(p => p.isComplete);
+    }
+    // Adds a new problem to the document
+    // Do not worry about HTML generation right now, HTML generation is only done in getHTML
+    // An alternative is to generate as you go
+    addProblem(problem) {
+        this.problems.push(problem);
+        this.isComplete = this.isComplete && problem.isComplete;
     }
     generateCSS() {
         return `:root {
@@ -1188,6 +1179,161 @@ body {
 }
 `;
     }
+    getHTML() {
+        // This method should be implemented to return the HTML representation of the Document
+        this.HTML = this.problems.map(problem => problem.getHTML()).join("");
+        return `<!DOCTYPE html>
+                <html lang="en">
+
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <link rel="stylesheet" href="boop.css">
+                    <style>
+                        ${this.generateCSS()}
+                    </style>
+                    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css"
+                        rel="stylesheet" />
+                    <title>ICS Document</title>
+                </head>
+
+                <body><div class="document-content">${this.HTML}</div>
+                        
+                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ocaml.min.js"></script>
+                </body>
+
+                </html>`;
+    }
+}
+class ICSCompiler {
+    constructor() {
+        this.outputPath = this.resolveOutputPath(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd());
+    }
+    getOutputPath(fileName) {
+        return this.resolveOutputPath(path.dirname(fileName));
+    }
+    resolveOutputPath(baseDir) {
+        const config = vscode.workspace.getConfiguration('ics');
+        const outputPath = config.get('outputPath', './output');
+        return path.isAbsolute(outputPath)
+            ? outputPath
+            : path.resolve(baseDir, outputPath);
+    }
+    async compile(document) {
+        // Parse the document to create a Document object
+        const parsedDocument = this.parseDocument(document);
+        // Check if the document is complete
+        if (!parsedDocument.isComplete) {
+            vscode.window.showErrorMessage("Document is not complete. Please fill in all required sections.");
+            return;
+        }
+        // Generate HTML from the Document object
+        const htmlContent = this.getHTML(parsedDocument);
+        // Write the HTML content to a file
+        const outputPath = this.getOutputPath(document.fileName);
+        const outputFileName = path.join(outputPath, `${path.basename(document.fileName, '.ics')}.html`);
+        try {
+            await vscode.workspace.fs.writeFile(vscode.Uri.file(outputFileName), Buffer.from(htmlContent, 'utf8'));
+            vscode.window.showInformationMessage(`Compiled successfully! Output written to ${outputFileName}`);
+        }
+        catch (error) {
+            vscode.window.showErrorMessage(`Failed to write output file!`);
+        }
+    }
+    parseDocument(document) {
+        const doc = new Document();
+        const lines = document.getText().split('\n');
+        const headerOpenRegex = /<<\s*header\s*:/i;
+        const headerCloseRegex = /^\s*header\s*>>$/i;
+        const problemOpenRegex = /<<\s*problem\s*:/i;
+        const problemCloseRegex = /^\s*problem\s*>>$/i;
+        const len = lines.length;
+        /**
+         * Summary of how the function works:
+         * 1. It reads the document line by line.
+         * 2. It checks for the opening header tag `<< header:`.
+         * 3. If the header is not complete, it collects lines until it finds the closing tag `header>>`.
+         * 4. It extracts lines till the closing tag, sends these to the header object, which parses the header information and populates the `Header` object.
+         * 5. It then looks for the opening problem tag `<< problem:`.
+         * 6. If it finds a problem tag, it extracts the problem number and title.
+         * 7. It collects lines until it finds the closing tag `problem>>`.
+         * 8. It creates a new `Problem` object, populates it with the problem information, and adds it to the document's problems array.
+         * 9. It can repeat the process multiple times for multiple problems.
+         * 10. Finally, it returns the populated `Document` object.
+         * 11. Error messages are currently shown using vs code windows.
+         */
+        for (let i = 0; i < len; i++) {
+            const currentLine = lines[i];
+            // See if header is done, if not, see if it matches
+            if (!doc.header.isComplete && headerOpenRegex.test(currentLine)) {
+                //Find the next line that contains the closing header tag header>>
+                const headerInfo = [];
+                let headerClosed = false;
+                for (let j = i + 1; j < len; j++) {
+                    if (headerCloseRegex.test(lines[j])) {
+                        headerClosed = true;
+                        break;
+                    }
+                    headerInfo.push(lines[j]);
+                }
+                if (headerClosed) {
+                    doc.header.parse(headerInfo);
+                }
+                else {
+                    vscode.window.showErrorMessage("Header section is not closed properly.");
+                }
+            }
+            if (problemOpenRegex.test(currentLine)) {
+                // Extract problem number and title
+                const problemInfo = currentLine.match(/<<\s*problem\s*:\s*(\d+)\s*:\s*(.*)\s*>>/i);
+                if (problemInfo && problemInfo.length === 3) {
+                    // Create a new Problem object
+                    const problemNumber = parseInt(problemInfo[1], 10);
+                    const problemTitle = problemInfo[2].trim();
+                    const problem = new Problem();
+                    problem.accept(problemTitle, problemNumber);
+                    // Find the next lines until we hit the closing tag
+                    const problemLines = [];
+                    let problemClosed = false;
+                    for (let j = i + 1; j < len; j++) {
+                        if (problemCloseRegex.test(lines[j])) {
+                            problemClosed = true;
+                            break;
+                        }
+                        problemLines.push(lines[j]);
+                    }
+                    if (problemClosed) {
+                        problem.parse(problemLines);
+                        // Add the problem object to the document object
+                        doc.problems.push(problem);
+                    }
+                    else {
+                        vscode.window.showErrorMessage("Problem section is not closed properly.");
+                    }
+                }
+                else {
+                    vscode.window.showErrorMessage("Problem section is not formatted correctly.");
+                }
+            }
+        }
+        return doc;
+    }
+    getHTML(document) {
+        // This method generates the HTML representation of the document
+        return document.getHTML();
+    }
 }
 exports.ICSCompiler = ICSCompiler;
+/**
+ * IMPROVEMENTS:
+ * 1. A general parseSection function
+ * 2. Do not create unnecessary objects
+ * 5. Don't raise vs code window errors for everything
+ * 8. Handle newlines
+ * 9. Ensure nested sections would function as expected
+ * 10. Fix inefficient string concatenation in HTML generation
+ * 11. Make a generate JSON interface for instructors
+ */ 
 //# sourceMappingURL=compiler.js.map

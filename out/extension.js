@@ -25,7 +25,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = __importStar(require("vscode"));
-const compiler_1 = require("./compiler");
+const compiler_old_1 = require("./compiler-old");
 const validator_1 = require("./validator");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
@@ -53,7 +53,7 @@ function activate(context) {
             vscode.window.showErrorMessage('Please open an ICS file to compile');
             return;
         }
-        const compiler = new compiler_1.ICSCompiler();
+        const compiler = new compiler_old_1.ICSCompiler();
         compiler.compile(editor.document);
     });
     const execAsync = (0, util_1.promisify)(child_process_1.exec);

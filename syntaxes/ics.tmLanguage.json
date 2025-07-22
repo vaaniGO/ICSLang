@@ -32,7 +32,7 @@
                 },
                 {
                     "name": "keyword.other.ics",
-                    "match": "\\b(requires|ensures|base case|induction hypothesis|inductive step|pre-condition|after the ith step|after the \\(i\\+1\\)th step|post-condition|assignment|student|date|collaborators|problem)\\b"
+                    "match": "\\b(requires|ensures|base case|induction hypothesis|inductive step|pre-condition|after the ith step|after the \\(i\\+1\\)th step|post-condition|assignment|student|date|collaborators|problem|helper)\\b"
                 }
             ]
         },
