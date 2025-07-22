@@ -1090,6 +1090,7 @@ class Problem implements Section {
 
 class Document {
     header = new Header();
+    assignmentNumber: number;
     problems: Problem[];
     isComplete: boolean;
     HTML: string;
@@ -1099,6 +1100,7 @@ class Document {
         this.problems = [];
         this.isComplete = false;
         this.HTML = "";
+        this.assignmentNumber = 0;
     }
 
     acceptHeaderContent(
@@ -1122,6 +1124,25 @@ class Document {
     addProblem(problem: Problem): void {
         this.problems.push(problem);
         this.isComplete = this.isComplete && problem.isComplete;
+    }
+
+    // Parse the JSON, extract the criterion and check it against the relevant objects
+    checkAssignmentCriteria(): boolean {
+        const jsonFile = path.join(__dirname, `../../ICSLang/assignment_${this.assignmentNumber}.json`);
+        const parsed = JSON.parse(jsonFile)
+        console.log(`Parsed JSON: ${JSON.stringify(parsed)}`);
+        const problem_allowances: ({ [key: string]: Section } | string)[][] = [];
+
+        if (!fs.existsSync(jsonFile)) {
+            vscode.window.showErrorMessage(`Assignment criteria file not found: ${jsonFile}`);
+            return false;
+        }
+
+        // parse the JSON and populate problem_allowances 
+        for (let item in parsed) {
+
+        }
+        return true;
     }
 
     private generateCSS(): string {

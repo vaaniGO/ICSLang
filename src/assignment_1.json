@@ -1,0 +1,43 @@
+{
+    "Problems": [
+        {
+            "Number": 1,
+            "Blueprint": [
+                "functionalCorrectness"
+            ],
+            "Operational Steps": null,
+            "Ocaml Code": [
+                "-allow-for-loop"
+            ],
+            "Proof": null
+        },
+        {
+            "Number": 2,
+            "Blueprint": [
+                "Complexity",
+                "Input-Output"
+            ],
+            "Operational Steps": null,
+            "Ocaml Code": [
+                "-allow-mutability"
+            ]
+        },
+        {
+            "Number": 3,
+            "Blueprint": [
+                "Input-Output",
+                "Functional Correctness"
+            ],
+            "Operational Steps": null,
+            "Ocaml Code": null
+        },
+        {
+            "Number": 4,
+            "TextAnswer": null
+        },
+        {
+            "Number": 5,
+            "Ocaml Code": null
+        }
+    ]
+}

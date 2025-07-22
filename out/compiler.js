@@ -928,6 +928,7 @@ class Document {
         this.problems = [];
         this.isComplete = false;
         this.HTML = "";
+        this.assignmentNumber = 0;
     }
     acceptHeaderContent(Name, Assignment, Collaborators, Date, Professor) {
         this.header.accept(Name, Assignment, Collaborators, Date, Professor);
@@ -942,6 +943,21 @@ class Document {
     addProblem(problem) {
         this.problems.push(problem);
         this.isComplete = this.isComplete && problem.isComplete;
+    }
+    // Parse the JSON, extract the criterion and check it against the relevant objects
+    checkAssignmentCriteria() {
+        const jsonFile = path.join(__dirname, `../../ICSLang/assignment_${this.assignmentNumber}.json`);
+        const parsed = JSON.parse(jsonFile);
+        console.log(`Parsed JSON: ${JSON.stringify(parsed)}`);
+        const problem_allowances = [];
+        if (!fs.existsSync(jsonFile)) {
+            vscode.window.showErrorMessage(`Assignment criteria file not found: ${jsonFile}`);
+            return false;
+        }
+        // parse the JSON and populate problem_allowances 
+        for (let item in parsed) {
+        }
+        return true;
     }
     generateCSS() {
         return `:root {

@@ -934,7 +934,7 @@ export class ICSCompiler {
     <div class="ocaml-code-header section-header">OCAML CODE
     </div>
     <div class="ocaml-code">
-    <div class="code-${status}">ICS Check: ${status}</div>
+    <!--<div class="code-${status}">ICS Check: ${status}</div>-->
         <div class="code sub-section">
             <pre class="line-numbers"><code class="language-ocaml">${section.content}</code></pre>
         </div>
