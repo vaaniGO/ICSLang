@@ -778,7 +778,7 @@ export class ICSCompiler {
 
     private parseOcamlCode(section: ICSSection, content: string) {
         // OCaml code doesn't need special parsing, just store the content
-        section.content = content.trim();
+        section.content = content;
     }
 
     private generateHTML(doc: ICSDocument): string {
@@ -936,7 +936,7 @@ export class ICSCompiler {
     <div class="ocaml-code">
     <div class="code-${status}">ICS Check: ${status}</div>
         <div class="code sub-section">
-            <pre class="line-numbers"><code class="language-ocaml">${this.escapeHtml(section.content)}</code></pre>
+            <pre class="line-numbers"><code class="language-ocaml">${section.content}</code></pre>
         </div>
     </div>
 </div>`;

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
-import { ICSCompiler } from './compiler';
+import { ICSCompiler } from './compiler-old';
 import { ICSValidator } from './validator';
 import * as path from 'path';
 import * as fs from 'fs';

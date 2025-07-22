@@ -1335,5 +1335,7 @@ exports.ICSCompiler = ICSCompiler;
  * 9. Ensure nested sections would function as expected
  * 10. Fix inefficient string concatenation in HTML generation
  * 11. Make a generate JSON interface for instructors
+ * 12. Connect with validator.ts to use isComplete to validate
+ * 13. Fix header accept and parse functions switch up
  */ 
 //# sourceMappingURL=compiler.js.map
