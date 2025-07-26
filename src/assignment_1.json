@@ -1,9 +1,10 @@
 {
     "Problems": [
         {
-            "Number": 1,
+            "Number": "1",
             "Blueprint": [
-                "functionalCorrectness"
+                "FunctionalCorrectness",
+                "Complexity"
             ],
             "Operational Steps": null,
             "Ocaml Code": [
@@ -12,10 +13,9 @@
             "Proof": null
         },
         {
-            "Number": 2,
+            "Number": "2",
             "Blueprint": [
-                "Complexity",
-                "Input-Output"
+                "FunctionalCorrectness"
             ],
             "Operational Steps": null,
             "Ocaml Code": [
@@ -23,20 +23,24 @@
             ]
         },
         {
-            "Number": 3,
-            "Blueprint": [
-                "Input-Output",
-                "Functional Correctness"
-            ],
+            "Number": "3",
             "Operational Steps": null,
             "Ocaml Code": null
         },
         {
-            "Number": 4,
-            "TextAnswer": null
+            "Number": "4",
+            "Text Answer": null
         },
         {
-            "Number": 5,
+            "Number": "5-a",
+            "Ocaml Code": null
+        },
+        {
+            "Number": "5-b",
+            "Ocaml Code": null
+        },
+        {
+            "Number": "5-c",
             "Ocaml Code": null
         }
     ]
