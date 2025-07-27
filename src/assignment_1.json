@@ -8,7 +8,7 @@
             ],
             "Operational Steps": null,
             "Ocaml Code": [
-                "-allow-for-loop"
+                "-allow_for_loops"
             ],
             "Proof": null
         },
@@ -19,7 +19,7 @@
             ],
             "Operational Steps": null,
             "Ocaml Code": [
-                "-allow-mutability"
+                "-allow_mutability"
             ]
         },
         {

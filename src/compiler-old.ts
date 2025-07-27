@@ -1223,51 +1223,50 @@ body {
     margin-bottom: 15px;
 }
 
-.code {
-    background: black;
-    color: inherit;
-    padding: 15px;
-    border-radius: 5px;
-    overflow-x: auto;
-}
+        .code {
+            background: black;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
 
-.code pre {
-    margin: 0;
-    white-space: pre-wrap;
-    background: transparent;
-}
+        .code pre {
+            margin: 0;
+            white-space: pre-wrap;
+            background: transparent;
+            color: inherit;
+        }
 
-.code pre code {
-    background: transparent;
-}
+        .code pre code {
+            background: transparent;
+            color: inherit;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+        }
 
-.step {
-    margin-bottom: 15px;
-}
+        /* Add Prism-specific overrides */
+        .code .token.comment,
+        .code .token.prolog,
+        .code .token.doctype,
+        .code .token.cdata {
+            color: #6a9955;
+        }
 
-/* Prism.js styling compatibility */
-.line-numbers {
-    position: relative;
-    padding-left: 3.8em;
-    counter-reset: linenumber;
-}
+        .code .token.keyword {
+            color: #569cd6;
+        }
 
-.line-numbers > code {
-    position: relative;
-    white-space: inherit;
-}
+        .code .token.string {
+            color: #ce9178;
+        }
 
-.line-numbers .line-numbers-rows {
-    position: absolute;
-    pointer-events: none;
-    top: 0;
-    font-size: 100%;
-    left: -3.8em;
-    width: 3em;
-    letter-spacing: -1px;
-    border-right: 1px solid #999;
-    user-select: none;
-}
+        .code .token.number {
+            color: #b5cea8;
+        }
+
+        .code .token.operator {
+            color: #d4d4d4;
+        }
 .code-Verified {
     background-color: green;
     color: white;

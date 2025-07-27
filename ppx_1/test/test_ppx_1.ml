@@ -1,9 +1,10 @@
-(* let _ =
+let _ =
   (* For loop *)
   for i = 0 to 10 do
     Printf.printf "i = %d\n" i
   done
 
+  (*
 let _ =
   (* While loop *)
   let x = ref 0 in

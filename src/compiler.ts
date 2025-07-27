@@ -1,4 +1,3 @@
-const allowed_flags = ""; // This must be the very first line. Do not remove it. 
 // Basically an array of dictionaries 
 // Each dictionary corresponds to one problem
 let assignment_info: { [key: string]: string[] | null | string }[] = [];
@@ -25,6 +24,30 @@ function escapeHtml(unsafe: string): string {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#x27;")
         .replace(/\n/g, "<br>");
+}
+
+async function initialise_dune(): Promise<void> {
+    try {
+        // Check if the ppx_1 directory exists
+        const ppxDir = path.resolve(__dirname, '../../ICSLang/ppx_1');
+        const execAsync = promisify(exec);
+        if (!fs.existsSync(ppxDir)) {
+            // Raise an error
+            throw new Error("PPX directory does not exist. Please run 'npm run init' to create it.");
+        }
+        const result = await execAsync(`eval $(opam env)
+            dune clean 
+            dune build`, {
+            encoding: 'utf-8',
+            cwd: ppxDir
+        });
+        console.log("Dune build result:", result);
+    }
+    catch (err: any) {
+        console.error("Error during dune build:", err);
+        vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR: ${err.message}`);
+        return;
+    }
 }
 
 /**
@@ -70,9 +93,6 @@ class Header implements Section {
         // Since both compiler.ts and assignment_1.json are in ICSLang/src,
         // construct path relative to the current file location
         const assignmentFile = path.join(__dirname, `../src/assignment_${this.assignmentNo}.json`);
-
-        console.log("Looking for assignment file at:", assignmentFile);
-        console.log("__dirname is:", __dirname);
 
         if (!fs.existsSync(assignmentFile)) {
             // Debug: list files in the same directory
@@ -123,12 +143,8 @@ class Header implements Section {
             }
         }
 
-        console.log(this.subsections);
-        console.log("Count", count);
-
         // Check if all required fields are filled
         this.isComplete = count === 5;
-        console.log("Is complete after parsing", this.isComplete);
 
         // Extract and validate assignment number
         if (this.subsections.Assignment && this.isComplete) {
@@ -173,7 +189,7 @@ class Header implements Section {
             <div class="assignment-name">${escapeHtml(Assignment)}</div>
             <div class="student-name">${escapeHtml(Name)}</div>
             <div class="date">${escapeHtml(Date)}</div>
-            <div class="collaborators">${escapeHtml(Collaborators)}</div>
+            <div class="collaborators">Collaborators: ${escapeHtml(Collaborators)}</div>
         </div>`;
     }
 }
@@ -645,7 +661,6 @@ class OperationalSteps implements Section {
     parse(
         lines: string[]
     ): void {
-        console.log(`Parsing Operational Steps in problem ${this.problemNo} section with lines:`, lines);
         const stepMatchRegex = /^\s*step\s*\d*\s*:\s*(.*)$/i;
         let len = lines.length;
         this.isComplete = len > 0;
@@ -696,6 +711,7 @@ class OcamlCode implements Section {
     name: string;
     isComplete: boolean;
     problemNo: string;
+    allowed_flags: string;
 
     constructor() {
         this.subsections = {
@@ -705,6 +721,7 @@ class OcamlCode implements Section {
         this.name = "Code";
         this.isComplete = false;
         this.problemNo = "";
+        this.allowed_flags = "";
     }
 
     isAllowedInProblem(): boolean {
@@ -729,11 +746,13 @@ class OcamlCode implements Section {
     }
     // Sets the code content for the object and sends it to verify which verifies it and sets the status accordingly.
     async parse(
-        codeLines: string[]
+        codeLines: string[],
+        allowed_flags: string = ""
     ): Promise<void> {
-        this.subsections.Code = codeLines.join("\n").trim();
+        this.subsections.Code = codeLines.map(line => line.trim()).join("\n");
         // If the code is not empty, then the section is complete
         this.isComplete = this.subsections.Code.length > 0;
+        this.allowed_flags = allowed_flags.trim();
         await this.ocamlVerify();
     }
     // Updates the 'status' subsection appropriately based on the status of the code.
@@ -747,17 +766,27 @@ class OcamlCode implements Section {
         fs.writeFileSync(tempFile, this.subsections.Code, 'utf8');
 
         try {
+            console.log("Ocaml verification begun!");
             const execAsync = promisify(exec);
-            const result = await execAsync(`eval $(opam env)
-            dune exec ./bin/checker.exe -- ${tempFile} ${allowed_flags}`, {
+
+            // Build the command with proper shell handling
+            const command = `eval $(opam env) && dune exec bin/checker.exe -- "${tempFile}" ${this.allowed_flags}`;
+
+            console.log("Executing command to verify Ocaml code:", command);
+            const result = await execAsync(command, {
                 encoding: 'utf-8',
-                cwd: ppxDir
+                cwd: ppxDir,
+                shell: '/bin/bash'  // Explicitly use bash
             });
+
+            console.log("Ocaml verification result:", result.stdout);
             this.subsections.Status = "ICS Verified";
         } catch (err: any) {
-            console.error(err.stderr || err.message);
+            console.log("Ocaml verification error:", err.message);
+            console.log("Stderr:", err.stderr);
+            console.log("Stdout:", err.stdout);
             this.subsections.Status = "ICS Failed";
-            vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR`);
+            vscode.window.showErrorMessage(`🐫 OOPSCaml! ERROR: ${err.stderr || err.message}`);
         } finally {
             // Delete the temporary file
             if (fs.existsSync(tempFile)) {
@@ -767,17 +796,22 @@ class OcamlCode implements Section {
     }
 
     getHTML(): string {
-        // This method should be implemented to return the HTML representation of the Code section
+        let code_status = "";
+        if (this.subsections.Status === "ICS Verified") {
+            code_status = "code-Verified";
+        }
+        else
+            code_status = "code-Failed";
+        console.log(this.subsections.Code);
         return `<div class="section">
-                <div class="ocaml-code-header section-header">OCAML CODE</div>
-                <div class="ocaml-code">
-                <div class="code-status>${this.subsections.Status}</div>
-                    <div class="code sub-section">
-                        <pre class="line-numbers"><code class="language-ocaml">
-                        ${escapeHtml(this.subsections.Code)}</code></pre>
-                    </div>
+            <div class="ocaml-code-header section-header">OCAML CODE</div>
+            <div class="ocaml-code">
+            <div class="code-status ${code_status}">${this.subsections.Status}</div>
+                <div class="code sub-section">
+                    <pre class="line-numbers"><code class="language-ocaml">${this.subsections.Code}</code></pre>
                 </div>
-            </div>`;
+            </div> 
+        </div>`;
     }
 }
 
@@ -800,7 +834,6 @@ class Induction implements Section {
     parse(
         lines: string[]
     ): void {
-        console.log("Begun parsing induction", lines);
         // This method parses the content of the Induction section
         const len = lines.length;
         const baseCaseRegex = /^\s*base\s*case\s*:\s*(.*)$/i;
@@ -811,7 +844,6 @@ class Induction implements Section {
         for (let i = 0; i < len; i++) {
             const currentLine = lines[i];
             if (baseCaseRegex.test(currentLine)) {
-                console.log("Base case matched!");
                 this.subsections.BaseCase = currentLine.split(':')[1].trim();
                 // Ensure that Base Case comes first
                 if (prevKey !== "") {
@@ -820,7 +852,6 @@ class Induction implements Section {
                 }
                 prevKey = "BaseCase"; // Keep track of the last key to ensure order
             } else if (inductiveHypothesisRegex.test(currentLine)) {
-                console.log("Inductive hypothesis matched!");
                 this.subsections.InductiveHypothesis = currentLine.split(':')[1].trim();
                 // Ensure that Inductive Hypothesis comes after Base Case
                 if (prevKey !== "BaseCase") {
@@ -829,7 +860,6 @@ class Induction implements Section {
                 }
                 prevKey = "InductiveHypothesis";
             } else if (inductiveStepRegex.test(currentLine)) {
-                console.log("Inductive step matched!");
                 this.subsections.InductiveStep = currentLine.split(':')[1].trim();
                 // Ensure that Inductive Step comes after Inductive Hypothesis
                 if (prevKey !== "InductiveHypothesis") {
@@ -841,9 +871,6 @@ class Induction implements Section {
                 this.subsections[prevKey] += "\n" + currentLine.trim(); // Append the current line to the last key
             }
         }
-        console.log("Base case made: ", this.subsections.BaseCase);
-        console.log("Inductive hypothesis made: ", this.subsections.InductiveHypothesis);
-        console.log("Inductive step made: ", this.subsections.InductiveStep);
         // If all subsections are filled, then the induction section is complete
         this.isComplete = [this.subsections.BaseCase, this.subsections.InductiveHypothesis, this.subsections.InductiveStep]
             .every(s => s.trim().length > 0);
@@ -897,7 +924,6 @@ class Invariant implements Section {
     parse(
         lines: string[]
     ): void {
-        console.log("Begun parsing invariant");
         // This method parses the content of the Invariant section
         const len = lines.length;
         const initialisationRegex = /^\s*initialisation\s*:\s*(.*)$/i;
@@ -1011,7 +1037,6 @@ class Proof implements Section {
         this.isHelper = isHelper;
         this.title = title;
         this.problemNo = problemNo.trim();
-        console.log("Accepted info for proof in problem", this.problemNo);
         if (!this.isAllowedInProblem()) {
             vscode.window.showErrorMessage(`Proof section is not allowed for problem ${this.problemNo}.`);
             return;
@@ -1205,7 +1230,6 @@ class Problem implements Section {
     }
 
     checkValidProblemNo() {
-        console.log("Checking against problem No", this.problemNo);
         // Check if the problem number is valid
         if (!this.problemNo || this.problemNo.trim().length === 0) {
             vscode.window.showErrorMessage("Problem number is not set or is empty.");
@@ -1223,10 +1247,19 @@ class Problem implements Section {
         return true;
     }
 
+    get_allowed_flags(): string {
+        // Get the allowed flags for the current problem from assignment_info
+        const problemInfo = assignment_info.find(info => info.Number === this.problemNo);
+        if (problemInfo && problemInfo["Ocaml Code"] != null && Array.isArray(problemInfo["Ocaml Code"])) {
+            return problemInfo["Ocaml Code"].join(" ");
+        }
+        return "";
+    }
+
     // This method parses the content of the Problem section, updates the objects of its subsections and the boolean to indicate whether the problem is complete
-    parse(
+    async parse(
         lines: string[]
-    ): void {
+    ): Promise<void> {
         const blueprintOpenRegex = /<<\s*blueprint\s*/i;
         const bluePrintCloseRegex = /^\s*blueprint\s*>>$/i;
         const operationalStepsOpenRegex = /<<\s*operational-steps\s*/i;
@@ -1316,9 +1349,12 @@ class Problem implements Section {
                 if (codeClosed) {
                     const code = this.subsections.Code;
                     code.accept(this.problemNo);
-                    code.parse(codeContent);
-                    i = j;
+                    //get allowed_flags from assignment_info
+                    const allowed_flags = this.get_allowed_flags();
+                    await code.parse(codeContent, allowed_flags);
+                    // Since we aren't keeping track of multiple code objects, we collate the HTML as we go
                     this.HTML += code.getHTML() + "\n";
+                    i = j;
                 } else {
                     vscode.window.showErrorMessage("OCaml Code section is not closed properly.");
                 }
@@ -1446,7 +1482,6 @@ class Document {
             // Add the problem dictionary to assignment_info
             assignment_info.push(problemDict);
         }
-        console.log("Added assignment criteria!");
 
     }
 
@@ -1628,9 +1663,9 @@ class Document {
             margin-bottom: 15px;
         }
 
-        .code {
+                .code {
             background: black;
-            color: inherit;
+            color: white;
             padding: 15px;
             border-radius: 5px;
             overflow-x: auto;
@@ -1640,10 +1675,44 @@ class Document {
             margin: 0;
             white-space: pre-wrap;
             background: transparent;
+            color: inherit;
         }
 
         .code pre code {
             background: transparent;
+            color: inherit;
+            tab-size: 2;
+            -moz-tab-size: 2;
+            white-space: pre;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            }
+            
+        .language-ocaml .token.keyword + * {
+            margin-left: 1em;
+        }
+
+        /* Add Prism-specific overrides */
+        .code .token.comment,
+        .code .token.prolog,
+        .code .token.doctype,
+        .code .token.cdata {
+            color: #6a9955;
+        }
+
+        .code .token.keyword {
+            color: #569cd6;
+        }
+
+        .code .token.string {
+            color: #ce9178;
+        }
+
+        .code .token.number {
+            color: #b5cea8;
+        }
+
+        .code .token.operator {
+            color: #d4d4d4;
         }
 
         .step {
@@ -1730,7 +1799,6 @@ class Document {
                 </head>
 
                 <body><div class="document-content">${this.HTML}</div>
-                        
                     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
                     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
                     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ocaml.min.js"></script>
@@ -1771,7 +1839,7 @@ export class ICSCompiler {
         try {
 
             // Parse the document
-            const parsedDocument = this.parseDocument(document);
+            const parsedDocument = await this.parseDocument(document);
 
             // Generate HTML regardless of completeness for debugging
             const htmlContent = parsedDocument.getHTML();
@@ -1797,9 +1865,10 @@ export class ICSCompiler {
         }
     }
 
-    private parseDocument(document: vscode.TextDocument): Document {
+    private async parseDocument(document: vscode.TextDocument): Promise<Document> {
         console.log("Document parsing started.");
         const doc = new Document();
+        await initialise_dune();
         const lines = document.getText().split('\n');
         const headerOpenRegex = /<<\s*header\s*/i;
         const headerCloseRegex = /^\s*header\s*>>$/i;
@@ -1869,7 +1938,7 @@ export class ICSCompiler {
                     }
 
                     if (problemClosed) {
-                        problem.parse(problemLines);
+                        await problem.parse(problemLines);
                         // Add the problem object to the document object
                         doc.addProblem(problem);
                     } else {
