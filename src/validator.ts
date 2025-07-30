@@ -255,7 +255,7 @@ export class ICSValidator {
         headerInfoOutsideSection: Map<string, number>,
         diagnostics: vscode.Diagnostic[]
     ): void {
-        const headerFields = ['assignment:', 'student:', 'date:', 'collaborators:', 'problem:'];
+        const headerFields = ['Assignment:', 'Name:', 'Date:', 'Collaborators:', 'Professor:'];
 
         for (const field of headerFields) {
             if (line.toLowerCase().includes(field)) {

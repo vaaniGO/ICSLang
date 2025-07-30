@@ -700,9 +700,9 @@ class OcamlCode {
             code_status = "code-Failed";
         console.log(this.subsections.Code);
         return `<div class="section">
-            <div class="ocaml-code-header section-header">OCAML CODE</div>
+            <div class="ocaml-code-header section-header">OCAML CODE
+            <span class="code-status ${code_status}">${this.subsections.Status}</span></div>
             <div class="ocaml-code">
-            <div class="code-status ${code_status}">${this.subsections.Status}</div>
                 <div class="code sub-section">
                     <pre class="line-numbers"><code class="language-ocaml">${this.subsections.Code}</code></pre>
                 </div>
@@ -1303,6 +1303,7 @@ class Document {
             --purple: #7F55B1;
             --orange: #ef7f08;
             --green: #096B68;
+            --gray: #999;
         }
 
         * {
@@ -1411,6 +1412,16 @@ class Document {
             padding-left: 10px;
         }
 
+
+        .text-answer-header {
+            background-color: var(--gray);
+        }
+
+        .text-answer {
+            border-left: 5px solid var(--gray);
+            padding-left: 10px;
+        }
+
         .blueprint-header {
             background-color: var(--blue);
         }
@@ -1474,84 +1485,10 @@ class Document {
             margin-bottom: 15px;
         }
 
-                .code {
-            background: black;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
 
-        .code pre {
-            margin: 0;
-            white-space: pre-wrap;
-            background: transparent;
-            color: inherit;
-        }
-
-        .code pre code {
-            background: transparent;
-            color: inherit;
-            tab-size: 2;
-            -moz-tab-size: 2;
-            white-space: pre;
-            font-family: 'Courier New', Consolas, Monaco, monospace;
-            }
-            
-        .language-ocaml .token.keyword + * {
-            margin-left: 1em;
-        }
-
-        /* Add Prism-specific overrides */
-        .code .token.comment,
-        .code .token.prolog,
-        .code .token.doctype,
-        .code .token.cdata {
-            color: #6a9955;
-        }
-
-        .code .token.keyword {
-            color: #569cd6;
-        }
-
-        .code .token.string {
-            color: #ce9178;
-        }
-
-        .code .token.number {
-            color: #b5cea8;
-        }
-
-        .code .token.operator {
-            color: #d4d4d4;
-        }
-
-        .step {
-            margin-bottom: 15px;
-        }
-
-        /* Prism.js styling compatibility */
-        .line-numbers {
-            position: relative;
-            padding-left: 3.8em;
-            counter-reset: linenumber;
-        }
-
-        .line-numbers>code {
-            position: relative;
-            white-space: inherit;
-        }
-
-        .line-numbers .line-numbers-rows {
-            position: absolute;
-            pointer-events: none;
-            top: 0;
-            font-size: 100%;
-            left: -3.8em;
-            width: 3em;
-            letter-spacing: -1px;
-            border-right: 1px solid #999;
-            user-select: none;
+        pre[class*=language-] {
+            border-radius: none;
+            border: none;
         }
 
         .code-Verified {
@@ -1560,10 +1497,9 @@ class Document {
             padding: 5px;
             border-radius: 5px;
             width: 200px;
-            opacity: 0.5;
-            margin-left: 10px;
             text-align: center;
             margin-bottom: 5px;
+            margin-left: 10px;
         }
 
         .code-Failed {
@@ -1572,16 +1508,9 @@ class Document {
             padding: 5px;
             border-radius: 5px;
             width: 170px;
-            opacity: 0.5;
-            margin-left: 10px;
             text-align: center;
             margin-bottom: 5px;
-        }
-
-        .step-number {
-            font-weight: bold;
-            color: var(--purple);
-            font-size: 20px;
+            margin-left: 10px;
         }
 `;
     }
@@ -1592,6 +1521,7 @@ class Document {
     getHTML() {
         // This method should be implemented to return the HTML representation of the Document
         this.generateHTML();
+        console.log("Reached here!");
         return `<!DOCTYPE html>
                 <html lang="en">
 
@@ -1599,18 +1529,49 @@ class Document {
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <link rel="stylesheet" href="boop.css">
-                    <style>
+                    <title>ICS Document</title>
+
+
+                <script>
+                    MathJax = {
+                        tex: {
+                            inlineMath: [['$', '$'], ['\\(', '\\)']], // Inline math delimiters
+                            displayMath: [['$$', '$$'], ['\\[', '\\]']] // Display math delimiters
+                        },
+                        svg: {
+                            fontCache: 'global'
+                        }
+                    };
+                </script>
+                  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+
+
+           
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-twilight.min.css" rel="stylesheet" />
+
+                <!-- Line numbers plugin CSS -->
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css"
+                    rel="stylesheet" />
+
+                                       <style>
                         ${this.generateCSS()}
                     </style>
-                    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css"
-                        rel="stylesheet" />
-                    <title>ICS Document</title>
+                    
                 </head>
 
                 <body><div class="document-content">${this.HTML}</div>
-                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ocaml.min.js"></script>
+                    <!-- CORRECTED PRISM.JS JAVASCRIPT CDN LINKS -->
+                    <!-- Main Prism.js core -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+
+                    <!-- OCaml language component - CORRECTED VERSION -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ocaml.min.js"></script>
+
+                    <!-- Line numbers plugin -->
+                    <script
+                        src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+                            
                 </body>
 
                 </html>`;

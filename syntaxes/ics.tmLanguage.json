@@ -28,11 +28,11 @@
             "patterns": [
                 {
                     "name": "keyword.control.ics",
-                    "match": "\\b(blueprint|operational steps|ocaml code|proof|induction|invariant|header)\\b"
+                    "match": "\\b(blueprint|operational-steps|ocaml-code|proof|induction|invariant|header)\\b"
                 },
                 {
                     "name": "keyword.other.ics",
-                    "match": "\\b(requires|ensures|base case|induction hypothesis|inductive step|pre-condition|after the ith step|after the \\(i\\+1\\)th step|post-condition|assignment|student|date|collaborators|problem|helper)\\b"
+                    "match": "\\b(functional-correctness|complexity|input-output|requires|ensures|base case|inductive hypothesis|inductive step|initialisation|maintainence|termination|assignment|student|date|collaborators|problem|helper)\\b"
                 }
             ]
         },
