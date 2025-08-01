@@ -17,13 +17,29 @@ import { promisify } from 'util';
  */
 
 function escapeHtml(unsafe: string): string {
-    return unsafe
+    // First, temporarily replace <tex> and </tex> with placeholders
+    const texOpenPlaceholder = "___TEX_OPEN_PLACEHOLDER___";
+    const texClosePlaceholder = "___TEX_CLOSE_PLACEHOLDER___";
+
+    let result = unsafe
+        .replace(/<tex>/g, texOpenPlaceholder)
+        .replace(/<\/tex>/g, texClosePlaceholder);
+
+    // Then escape all HTML characters
+    result = result
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#x27;")
         .replace(/\n/g, "<br>");
+
+    // Finally, restore the <tex> and </tex> tags
+    result = result
+        .replace(new RegExp(texOpenPlaceholder, 'g'), "<tex>")
+        .replace(new RegExp(texClosePlaceholder, 'g'), "</tex>");
+
+    return result;
 }
 
 async function initialise_dune(): Promise<void> {
@@ -239,7 +255,7 @@ class FunctionalCorrectness implements Section {
             const currentLine = lines[i];
             if (requiresOpenRegex.test(currentLine) || ensuresOpenRegex.test(currentLine)) {
                 counter++;
-                this.subsections[counter] += currentLine.split(':')[1].trim();
+                this.subsections[counter] += currentLine.split(':')[1];
             }
             else {
                 // For e.g. counter = 0 when we are in 'requires, the moment the subsection switches, count updates and we automatically starts populating the next clause (ensures)
@@ -307,10 +323,21 @@ class Complexity implements Section {
         lines: string[]
     ): void {
         let len = lines.length;
+        let currentSection = "";
+        const timeRegex = /time\s*:/i;
+        const spaceRegex = /space\s*:/i;
         for (let i = 0; i < len; i++) {
-            const [key, value] = lines[i].split(':').map(part => part.trim());
-            if (key && value) {
-                this.subsections[key] = value;
+            const currentLine = lines[i];
+            if (timeRegex.test(currentLine)) {
+                currentSection = "Time";
+                this.subsections['Time'] += currentLine.split(':')[1];
+            }
+            else if (spaceRegex.test(currentLine)) {
+                currentSection = "Space";
+                this.subsections['Space'] += currentLine.split(':')[1];
+            }
+            else if (currentSection != "") {
+                this.subsections[currentSection] += currentLine;
             }
         }
         // Only time complexity is required, the other is optional
@@ -368,7 +395,7 @@ class InputOutput implements Section {
         let currentSection = "";
         // We want to ensure that for all 0<i<len, Input[i] and Output[i] are paired, naturally, len(Input) = len(Output)
         for (let i = 0; i < len; i++) {
-            const currentLine = lines[i].trim();
+            const currentLine = lines[i];
             if (currentLine.toLowerCase().includes("input")) {
                 // Require that an input must be followed by an output and no duplication.
                 if (currentSection == "Input") {
@@ -383,7 +410,8 @@ class InputOutput implements Section {
                     return;
                 }
                 currentSection = "Output";
-            } else if (currentSection) {
+            }
+            if (currentSection) {
                 this.subsections[currentSection].push(currentLine);
             }
         }
@@ -515,12 +543,12 @@ class Blueprint implements Section {
         const InputOutputOpenRegex = /<<\s*input-output\s*/i;
         const complexityOpenRegex = /<<\s*complexity\s*/i;
         const fcCoseRegex = /^\s*functional-correctness\s*>>$/i;
-        const InputOutputCloseRegex = /^\s*input-output\s*>>$/i;
+        const InputOutputCloseRegex = /^\s*input-output\s*>>\s*$/i;
         const complexityCloseRegex = /^\s*complexity\s*>>$/i;
 
         for (let i = 0; i < len; i++) {
             let currentLine = lines[i];
-            let currentLineLower = currentLine.toLowerCase().trim();
+            let currentLineLower = currentLine.toLowerCase();
             // Check if the line starts with a keyword. If it does, create an object of the required section and let the class handle the rest
             if (fcOpenRegex.test(currentLineLower)) {
                 if (!this.allowed.includes("FunctionalCorrectness")) {
@@ -570,6 +598,7 @@ class Blueprint implements Section {
                     i = j;
                     this.HTML += this.subsections['Input-Output'].getHTML() + "\n";
                 } else {
+                    console.log("Input content: ", InputOutput_content);
                     vscode.window.showErrorMessage("Input-Output section is not closed properly.");
                     return;
                 }
@@ -749,7 +778,7 @@ class OcamlCode implements Section {
         codeLines: string[],
         allowed_flags: string = ""
     ): Promise<void> {
-        this.subsections.Code = codeLines.map(line => line.trim()).join("\n");
+        this.subsections.Code = codeLines.join("\n");
         // If the code is not empty, then the section is complete
         this.isComplete = this.subsections.Code.length > 0;
         this.allowed_flags = allowed_flags.trim();
@@ -844,7 +873,7 @@ class Induction implements Section {
         for (let i = 0; i < len; i++) {
             const currentLine = lines[i];
             if (baseCaseRegex.test(currentLine)) {
-                this.subsections.BaseCase = currentLine.split(':')[1].trim();
+                this.subsections.BaseCase = currentLine.split(':')[1];
                 // Ensure that Base Case comes first
                 if (prevKey !== "") {
                     vscode.window.showErrorMessage("Base Case must come first.");
@@ -852,7 +881,7 @@ class Induction implements Section {
                 }
                 prevKey = "BaseCase"; // Keep track of the last key to ensure order
             } else if (inductiveHypothesisRegex.test(currentLine)) {
-                this.subsections.InductiveHypothesis = currentLine.split(':')[1].trim();
+                this.subsections.InductiveHypothesis = currentLine.split(':')[1];
                 // Ensure that Inductive Hypothesis comes after Base Case
                 if (prevKey !== "BaseCase") {
                     vscode.window.showErrorMessage("Inductive Hypothesis must come after Base Case.");
@@ -860,7 +889,7 @@ class Induction implements Section {
                 }
                 prevKey = "InductiveHypothesis";
             } else if (inductiveStepRegex.test(currentLine)) {
-                this.subsections.InductiveStep = currentLine.split(':')[1].trim();
+                this.subsections.InductiveStep = currentLine.split(':')[1];
                 // Ensure that Inductive Step comes after Inductive Hypothesis
                 if (prevKey !== "InductiveHypothesis") {
                     vscode.window.showErrorMessage("Inductive Step must come after Inductive Hypothesis.");
@@ -868,7 +897,7 @@ class Induction implements Section {
                 }
                 prevKey = "InductiveStep";
             } else if (currentLine.trim() != "") {
-                this.subsections[prevKey] += "\n" + currentLine.trim(); // Append the current line to the last key
+                this.subsections[prevKey] += "\n" + currentLine; // Append the current line to the last key
             }
         }
         // If all subsections are filled, then the induction section is complete
@@ -933,7 +962,7 @@ class Invariant implements Section {
         for (let i = 0; i < len; i++) {
             const currentLine = lines[i];
             if (initialisationRegex.test(currentLine)) {
-                this.subsections.Initialisation = currentLine.split(':')[1].trim();
+                this.subsections.Initialisation = currentLine.split(':')[1];
                 // Ensure that Initialisation comes first
                 if (prevKey !== "") {
                     vscode.window.showErrorMessage("Initialisation must come first.");
@@ -941,7 +970,7 @@ class Invariant implements Section {
                 }
                 prevKey = "Initialisation"; // Keep track of the last key to ensure order
             } else if (maintenanceRegex.test(currentLine)) {
-                this.subsections.Maintenance = currentLine.split(':')[1].trim();
+                this.subsections.Maintenance = currentLine.split(':')[1];
                 // Ensure that Maintenance comes after Initialisation
                 if (prevKey !== "Initialisation") {
                     vscode.window.showErrorMessage("Maintenance must come after Initialisation.");
@@ -949,7 +978,7 @@ class Invariant implements Section {
                 }
                 prevKey = "Maintenance";
             } else if (terminationRegex.test(currentLine)) {
-                this.subsections.Termination = currentLine.split(':')[1].trim();
+                this.subsections.Termination = currentLine.split(':')[1];
                 // Ensure that Termination comes after Maintenance
                 if (prevKey !== "Maintenance") {
                     vscode.window.showErrorMessage("Termination must come after Maintenance.");
@@ -957,7 +986,7 @@ class Invariant implements Section {
                 }
                 prevKey = "Termination";
             } else {
-                this.subsections[prevKey] += "\n" + currentLine.trim(); // Append the current line to the last key
+                this.subsections[prevKey] += "\n" + currentLine; // Append the current line to the last key
             }
         }
         // If all subsections are filled, then the invariant section is complete
@@ -1173,7 +1202,7 @@ class TextAnswer implements Section {
             return;
         }
         // This method parses the content of the Text Answer section
-        this.subsections.Answer = lines.join("\n").trim();
+        this.subsections.Answer = lines.join("\n");
         // If the answer is not empty, then the section is complete
         this.isComplete = this.subsections.Answer.length > 0;
     }
@@ -1503,7 +1532,7 @@ class Document {
             display: flex;
             flex-direction: column;
             font-weight: 550;
-            margin: 20px;
+            margin: 30px;
         }
 
         .assignment-name {
@@ -1579,6 +1608,12 @@ class Document {
             font-weight: bold;
             color: var(--blue);
             font-size: 20px;
+        }
+
+        .step-number {
+            font-weight: bold; 
+            font-size: 20px;
+            color: var(--purple);
         }
 
         .step-header {
@@ -1676,7 +1711,7 @@ class Document {
 
 
         pre[class*=language-] {
-            border-radius: none;
+            border-radius: 0;
             border: none;
         }
 
@@ -1723,17 +1758,37 @@ class Document {
                     <title>ICS Document</title>
 
 
-                <script>
-                    MathJax = {
-                        tex: {
-                            inlineMath: [['$', '$'], ['\\(', '\\)']], // Inline math delimiters
-                            displayMath: [['$$', '$$'], ['\\[', '\\]']] // Display math delimiters
-                        },
-                        svg: {
-                            fontCache: 'global'
-                        }
-                    };
-                </script>
+                    <script>
+                            MathJax = {
+                                tex: {
+                                    inlineMath: [['$', '$'], ['\(', '\)']], // Inline math delimiters
+                                    displayMath: [['$$', '$$'], ['\[', '\]']], // Display math delimiters
+                                    processEscapes: true
+                                },
+                                svg: {
+                                    fontCache: 'global'
+                                },
+                                options: {
+                                    processHtmlClass: 'tex-enabled',
+                                    ignoreHtmlClass: '.*',
+                                    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+                                }
+                            };
+
+                            // Custom function to process tex tags after page load
+                            window.addEventListener('DOMContentLoaded', function () {
+                                // Find all <tex> elements and add the tex-enabled class
+                                const texElements = document.querySelectorAll('tex');
+                                texElements.forEach(element => {
+                                    element.classList.add('tex-enabled');
+                                }); 
+
+                                // Trigger MathJax to reprocess
+                                if (window.MathJax && window.MathJax.typesetPromise) {
+                                    MathJax.typesetPromise();
+                                }
+                            });
+                        </script>
                   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
 
 
@@ -1927,3 +1982,5 @@ export class ICSCompiler {
  * 12. Connect with validator.ts to use isComplete to validate 
  * 14. Currently the code checks if a wrong section is in a problem that bans it, but does not check if all required sections are there
  */
+
+export { Header, Blueprint, OcamlCode, OperationalSteps, Proof, Problem, Document };

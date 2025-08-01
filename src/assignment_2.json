@@ -1,0 +1,18 @@
+{
+    "Problems": [
+        {
+            "Number": "1",
+            "Blueprint": [
+                "FunctionalCorrectness",
+                "Complexity",
+                "Input-Output"
+            ],
+            "Operational Steps": null,
+            "Ocaml Code": [
+                "-allow_while_loops",
+                "-allow_mutability"
+            ],
+            "Proof": null
+        }
+    ]
+}

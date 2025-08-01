@@ -3,7 +3,7 @@
     "displayName": "BOOP: How to Right Code!",
     "description": "Get it right, then get it written!",
     "publisher": "VaaniGoenka",
-    "version": "0.5.9",
+    "version": "0.6.0",
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.74.0"
@@ -59,6 +59,13 @@
                 "command": "ics.compile",
                 "key": "ctrl+shift+c",
                 "when": "editorLangId == ics"
+            }
+        ],
+        "themes": [
+            {
+                "label": "ICS Theme",
+                "uiTheme": "vs-dark",
+                "path": "./themes/ics-theme.json"
             }
         ],
         "configuration": {

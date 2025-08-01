@@ -1,6 +1,32 @@
 import * as vscode from 'vscode';
 
+interface SectionState {
+    opened: boolean;
+    line: number;
+    closed: boolean;
+}
+
 export class ICSValidator {
+    private readonly VALID_TAGS = [
+        'problem', 'blueprint', 'ocaml-code', 'proof', 'functional-correctness',
+        'complexity', 'input-output', 'induction', 'invariant', 'operational-steps', 'header'
+    ];
+
+    private readonly REQUIRED_SUBTAGS = new Map<string, string[]>([
+        ['functional-correctness', ['requires:', 'ensures:']],
+        ['input-output', ['input:', 'output:']],
+        ['complexity', ['time:']],
+        ['induction', ['base case:', 'inductive hypothesis:', 'inductive step:']],
+        ['invariant', ['initialisation:', 'maintenance:', 'termination:']],
+        ['operational-steps', ['step 1:']]
+    ]);
+
+    // Tags that must be within blueprint
+    private readonly BLUEPRINT_REQUIRED_TAGS = ['functional-correctness', 'complexity', 'input-output'];
+
+    // Tags that must be within proof
+    private readonly PROOF_REQUIRED_TAGS = ['induction', 'invariant'];
+
     validate(document: vscode.TextDocument): void {
         const diagnostics = this.getDiagnostics(document);
 
@@ -17,389 +43,268 @@ export class ICSValidator {
         const content = document.getText();
         const lines = content.split('\n');
 
-        // Track sections and their states - reset for each problem
-        let sectionStates = new Map<string, { opened: boolean, line: number, closed: boolean }>();
-        const requiredSubsections = new Map<string, string[]>();
-        let foundSubsections = new Map<string, Set<string>>();
+        // Track all sections globally
+        const allSections = new Map<string, SectionState>();
 
-        // Define required subsections for each section type
-        requiredSubsections.set('blueprint', ['requires', 'ensures']);
-        requiredSubsections.set('induction', ['base case', 'induction hypothesis', 'inductive step']);
-        requiredSubsections.set('invariant', ['pre-condition', 'after the ith step', 'after the (i+1)th step', 'post-condition']);
-        requiredSubsections.set('header', ['assignment', 'student', 'date', 'collaborators']);
-
-        // Track section hierarchy - use a stack to handle nested sections
-        let sectionStack: string[] = [];
-        let currentProofType: string | null = null;
-
-        // Track header information found outside of header section
-        const headerInfoOutsideSection = new Map<string, number>();
-        let headerSectionFound = false;
+        // Track current contexts
         let inProblem = false;
-        let inHeader = false;
+        let problemLine = -1;
+        let inBlueprint = false;
+        let blueprintLine = -1;
+        let inProof = false;
+        let proofLine = -1;
 
-        // Helper function to reset problem-specific state
-        const resetProblemState = () => {
-            sectionStates = new Map<string, { opened: boolean, line: number, closed: boolean }>();
-            foundSubsections = new Map<string, Set<string>>();
-            sectionStack = [];
-            currentProofType = null;
-        };
-
+        // Process each line
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
 
-            // Check for problem start
-            const problemStartMatch = line.match(/^<<problem\s+(.+)$/);
-            if (problemStartMatch) {
-                // Validate any unclosed sections from previous problem
-                if (inProblem) {
-                    this.validateUnclosedSections(sectionStates, lines, diagnostics);
+            // Skip empty lines
+            if (!line) continue;
+
+            // Check for opening tags: <<tagname or <<problem number title
+            const openMatch = line.match(/^<<(.+)$/);
+            if (openMatch) {
+                const tagContent = openMatch[1].trim();
+                let tagName: string;
+
+                // Special handling for problem tag with number and title
+                if (tagContent.match(/^problem\s+\d+/)) {
+                    tagName = 'problem';
+                } else {
+                    tagName = tagContent.toLowerCase();
                 }
 
-                // Reset state for new problem
-                resetProblemState();
-                inProblem = true;
-                continue;
-            }
-
-            // Check for problem end
-            if (line === 'problem>>' && inProblem) {
-                // Validate unclosed sections for current problem
-                this.validateUnclosedSections(sectionStates, lines, diagnostics);
-
-                // Reset state after problem ends
-                resetProblemState();
-                inProblem = false;
-                continue;
-            }
-
-            // Check for header section start
-            if (line === '<<header') {
-                inHeader = true;
-                headerSectionFound = true;
-                sectionStates.set('header', { opened: true, line: i, closed: false });
-                sectionStack.push('header');
-                foundSubsections.set('header', new Set());
-                continue;
-            }
-
-            // Check for header section end
-            if (line === 'header>>' && inHeader) {
-                inHeader = false;
-                if (sectionStates.has('header')) {
-                    sectionStates.get('header')!.closed = true;
-                    this.validateRequiredSubsections('header', foundSubsections.get('header') || new Set(),
-                        requiredSubsections.get('header') || [], diagnostics, i);
-                }
-                sectionStack.pop();
-                continue;
-            }
-
-            // Skip non-problem content if not in header
-            if (!inProblem && !inHeader) {
-                continue;
-            }
-
-            // Check for section opening - fixed syntax: <<keyword
-            const openSectionMatch = line.match(/^<<(blueprint|operational steps|ocaml code|proof|induction|invariant)$/);
-            if (openSectionMatch) {
-                const sectionName = openSectionMatch[1];
-
-                // Check if section was already opened in current problem
-                if (sectionStates.has(sectionName) && sectionStates.get(sectionName)!.opened && !sectionStates.get(sectionName)!.closed) {
+                // Validate tag name
+                if (!this.VALID_TAGS.includes(tagName)) {
                     diagnostics.push(new vscode.Diagnostic(
                         new vscode.Range(i, 0, i, line.length),
-                        `Section '${sectionName}' is already opened at line ${sectionStates.get(sectionName)!.line + 1}`,
+                        `Invalid tag '${tagName}'. Valid tags are: ${this.VALID_TAGS.join(', ')}`,
                         vscode.DiagnosticSeverity.Error
                     ));
                     continue;
                 }
 
-                sectionStates.set(sectionName, { opened: true, line: i, closed: false });
-                sectionStack.push(sectionName);
-
-                // Initialize subsection tracking
-                if (requiredSubsections.has(sectionName)) {
-                    foundSubsections.set(sectionName, new Set());
-                }
-
-                // Special handling for proof sections
-                if (sectionName === 'induction' || sectionName === 'invariant') {
-                    currentProofType = sectionName;
-                    foundSubsections.set(sectionName, new Set());
-                } else if (sectionName === 'proof') {
-                    // For generic proof sections, we don't set currentProofType
-                    currentProofType = null;
-                }
-
-                continue;
-            }
-
-            // Check for section closing - fixed syntax: keyword>>
-            const closeSectionMatch = line.match(/^(blueprint|operational steps|ocaml code|proof|induction|invariant)>>$/);
-            if (closeSectionMatch) {
-                const sectionName = closeSectionMatch[1];
-
-                // Check if section exists and is opened
-                if (!sectionStates.has(sectionName) || !sectionStates.get(sectionName)!.opened) {
+                // Check if tag is already open
+                if (allSections.has(tagName) && allSections.get(tagName)!.opened && !allSections.get(tagName)!.closed) {
                     diagnostics.push(new vscode.Diagnostic(
                         new vscode.Range(i, 0, i, line.length),
-                        `Closing tag for '${sectionName}' found but section was never opened`,
+                        `Tag '${tagName}' is already opened at line ${allSections.get(tagName)!.line + 1}`,
                         vscode.DiagnosticSeverity.Error
                     ));
                     continue;
                 }
 
-                // Check if section is already closed
-                if (sectionStates.get(sectionName)!.closed) {
-                    diagnostics.push(new vscode.Diagnostic(
-                        new vscode.Range(i, 0, i, line.length),
-                        `Closing tag for '${sectionName}' found but section is already closed`,
-                        vscode.DiagnosticSeverity.Error
-                    ));
+                // Validate problem tag format
+                if (tagName === 'problem') {
+                    if (!tagContent.match(/^problem\s+\d+:\s+.+/)) {
+                        diagnostics.push(new vscode.Diagnostic(
+                            new vscode.Range(i, 0, i, line.length),
+                            `Problem tag must contain a number and title. Format: <<problem number title`,
+                            vscode.DiagnosticSeverity.Error
+                        ));
+                        continue;
+                    }
+
+                    if (inProblem) {
+                        diagnostics.push(new vscode.Diagnostic(
+                            new vscode.Range(i, 0, i, line.length),
+                            `Problem tag is already opened at line ${problemLine + 1}`,
+                            vscode.DiagnosticSeverity.Error
+                        ));
+                        continue;
+                    }
+                    inProblem = true;
+                    problemLine = i;
+                }
+                else if (tagName === 'header') {
+                    allSections.set(tagName, { opened: true, line: i, closed: false });
                     continue;
                 }
+                else {
+                    // All other tags must be inside a problem
+                    if (!inProblem) {
+                        diagnostics.push(new vscode.Diagnostic(
+                            new vscode.Range(i, 0, i, line.length),
+                            `Tag '${tagName}' must be inside a problem tag`,
+                            vscode.DiagnosticSeverity.Error
+                        ));
+                        continue;
+                    }
 
-                // Check if we're in the right section context
-                if (sectionStack.length === 0) {
-                    diagnostics.push(new vscode.Diagnostic(
-                        new vscode.Range(i, 0, i, line.length),
-                        `Closing tag for '${sectionName}' found but currently in section null`,
-                        vscode.DiagnosticSeverity.Error
-                    ));
-                    continue;
-                }
+                    // Check blueprint context requirements
+                    if (this.BLUEPRINT_REQUIRED_TAGS.includes(tagName)) {
+                        if (!inBlueprint) {
+                            diagnostics.push(new vscode.Diagnostic(
+                                new vscode.Range(i, 0, i, line.length),
+                                `Tag '${tagName}' must be inside a blueprint tag`,
+                                vscode.DiagnosticSeverity.Error
+                            ));
+                            continue;
+                        }
+                    }
 
-                // Find the section in the stack (handle nested sections)
-                let sectionIndex = -1;
-                for (let j = sectionStack.length - 1; j >= 0; j--) {
-                    if (sectionStack[j] === sectionName) {
-                        sectionIndex = j;
-                        break;
+                    // Check proof context requirements
+                    if (this.PROOF_REQUIRED_TAGS.includes(tagName)) {
+                        if (!inProof) {
+                            diagnostics.push(new vscode.Diagnostic(
+                                new vscode.Range(i, 0, i, line.length),
+                                `Tag '${tagName}' must be inside a proof tag`,
+                                vscode.DiagnosticSeverity.Error
+                            ));
+                            continue;
+                        }
+                    }
+
+                    // Track blueprint and proof contexts
+                    if (tagName === 'blueprint') {
+                        inBlueprint = true;
+                        blueprintLine = i;
+                    } else if (tagName === 'proof') {
+                        inProof = true;
+                        proofLine = i;
                     }
                 }
 
-                if (sectionIndex === -1) {
+                // Record the opened section
+                allSections.set(tagName, { opened: true, line: i, closed: false });
+                continue;
+            }
+
+            // Check for closing tags: tagname>>
+            const closeMatch = line.match(/^(.+)>>$/);
+            if (closeMatch) {
+                const tagName = closeMatch[1].toLowerCase().trim();
+
+                // Check if this is a valid tag
+                if (!this.VALID_TAGS.includes(tagName)) {
                     diagnostics.push(new vscode.Diagnostic(
                         new vscode.Range(i, 0, i, line.length),
-                        `Closing tag for '${sectionName}' found but section is not in current context. Current stack: [${sectionStack.join(', ')}]`,
+                        `Invalid closing tag '${tagName}'`,
                         vscode.DiagnosticSeverity.Error
                     ));
                     continue;
                 }
 
-                // Mark section as closed
-                sectionStates.get(sectionName)!.closed = true;
-
-                // Validate required subsections
-                this.validateRequiredSubsections(sectionName, foundSubsections.get(sectionName) || new Set(),
-                    requiredSubsections.get(sectionName) || [], diagnostics, i);
-
-                // Remove from stack (remove this section and any nested ones)
-                sectionStack.splice(sectionIndex);
-
-                if (sectionName === 'induction' || sectionName === 'invariant') {
-                    currentProofType = null;
+                // Check if tag was opened
+                if (!allSections.has(tagName) || !allSections.get(tagName)!.opened) {
+                    diagnostics.push(new vscode.Diagnostic(
+                        new vscode.Range(i, 0, i, line.length),
+                        `Closing tag '${tagName}' found but tag was never opened`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                    continue;
                 }
+
+                // Check if tag is already closed
+                if (allSections.get(tagName)!.closed) {
+                    diagnostics.push(new vscode.Diagnostic(
+                        new vscode.Range(i, 0, i, line.length),
+                        `Tag '${tagName}' is already closed`,
+                        vscode.DiagnosticSeverity.Error
+                    ));
+                    continue;
+                }
+
+                // Mark as closed
+                allSections.get(tagName)!.closed = true;
+
+                // Update context tracking
+                if (tagName === 'problem') {
+                    inProblem = false;
+                    problemLine = -1;
+                    // Reset nested contexts when problem closes
+                    inBlueprint = false;
+                    inProof = false;
+                } else if (tagName === 'blueprint') {
+                    inBlueprint = false;
+                    blueprintLine = -1;
+                } else if (tagName === 'proof') {
+                    inProof = false;
+                    proofLine = -1;
+                }
+
+                // Validate required subtags before closing
+                if (this.REQUIRED_SUBTAGS.has(tagName)) {
+                    this.validateSubtags(document, allSections.get(tagName)!.line, i, tagName, diagnostics);
+                }
+
                 continue;
-            }
-
-            // Check for header information outside of header section
-            if (!inHeader && (sectionStack.length === 0 || sectionStack[sectionStack.length - 1] !== 'header')) {
-                this.checkHeaderInfoOutsideSection(line, i, headerInfoOutsideSection, diagnostics);
-            }
-
-            // Check for subsections
-            const currentSection = sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : null;
-            if (currentSection && (inProblem || inHeader)) {
-                this.checkSubsections(line, currentSection, currentProofType, foundSubsections, i, diagnostics);
-            }
-
-            // Check for step references
-            if (inProblem) {
-                this.validateStepReferences(line, document, i, diagnostics);
             }
         }
 
-        // Final validation for unclosed sections
-        this.validateUnclosedSections(sectionStates, lines, diagnostics);
-
-        // Check if header section exists
-        if (!headerSectionFound) {
-            diagnostics.push(new vscode.Diagnostic(
-                new vscode.Range(0, 0, 0, 0),
-                `Document must contain a header section enclosed in <<header and header>> tags`,
-                vscode.DiagnosticSeverity.Error
-            ));
+        // Check for unclosed tags
+        for (const [tagName, state] of allSections) {
+            if (state.opened && !state.closed) {
+                diagnostics.push(new vscode.Diagnostic(
+                    new vscode.Range(state.line, 0, state.line, lines[state.line] ? lines[state.line].length : 0),
+                    `Tag '${tagName}' is not closed`,
+                    vscode.DiagnosticSeverity.Error
+                ));
+            }
         }
 
         return diagnostics;
     }
 
-    // Helper method to validate unclosed sections
-    private validateUnclosedSections(sectionStates: Map<string, { opened: boolean, line: number, closed: boolean }>, lines: string[], diagnostics: vscode.Diagnostic[]) {
-        for (const [sectionName, state] of sectionStates) {
-            if (state.opened && !state.closed) {
-                diagnostics.push(new vscode.Diagnostic(
-                    new vscode.Range(state.line, 0, state.line, lines[state.line] ? lines[state.line].length : 0),
-                    `Section '${sectionName}' is not closed`,
-                    vscode.DiagnosticSeverity.Error
-                ));
-            }
-        }
-    }
-    private checkHeaderInfoOutsideSection(
-        line: string,
-        lineNumber: number,
-        headerInfoOutsideSection: Map<string, number>,
+    private validateSubtags(
+        document: vscode.TextDocument,
+        startLine: number,
+        endLine: number,
+        tagName: string,
         diagnostics: vscode.Diagnostic[]
     ): void {
-        const headerFields = ['Assignment:', 'Name:', 'Date:', 'Collaborators:', 'Professor:'];
+        const requiredSubtags = this.REQUIRED_SUBTAGS.get(tagName);
+        if (!requiredSubtags) return;
 
-        for (const field of headerFields) {
-            if (line.toLowerCase().includes(field)) {
-                headerInfoOutsideSection.set(field, lineNumber);
-                diagnostics.push(new vscode.Diagnostic(
-                    new vscode.Range(lineNumber, 0, lineNumber, line.length),
-                    `Header information '${field}' must be enclosed within <<header and header>> tags`,
-                    vscode.DiagnosticSeverity.Error
-                ));
-                break; // Only report one error per line
+        const content = document.getText();
+        const lines = content.split('\n');
+        const foundSubtags = new Set<string>();
+
+        // Check content between start and end lines
+        for (let i = startLine + 1; i < endLine; i++) {
+            const line = lines[i].toLowerCase().trim();
+
+            for (const subtag of requiredSubtags) {
+                if (line.includes(subtag)) {
+                    foundSubtags.add(subtag);
+                }
             }
-        }
-    }
 
-    private checkSubsections(
-        line: string,
-        currentSection: string,
-        currentProofType: string | null,
-        foundSubsections: Map<string, Set<string>>,
-        lineNumber: number,
-        diagnostics: vscode.Diagnostic[]
-    ): void {
-        // Check for blueprint subsections
-        if (currentSection === 'blueprint') {
-            if (line.toLowerCase().includes('requires:')) {
-                foundSubsections.get('blueprint')?.add('requires');
-            } else if (line.toLowerCase().includes('ensures:')) {
-                foundSubsections.get('blueprint')?.add('ensures');
+            // Special handling for operational-steps to find any step number
+            if (tagName === 'operational-steps') {
+                const stepMatch = line.match(/step\s+(\d+):/);
+                if (stepMatch) {
+                    const stepNum = parseInt(stepMatch[1]);
+                    if (stepNum >= 1) {
+                        foundSubtags.add('step 1:'); // Mark as satisfied if any step >= 1 is found
+                    }
+                }
             }
-        }
 
-        // Check for header subsections - fixed to use regex for more flexible matching
-        if (currentSection === 'header') {
-            const lowerLine = line.toLowerCase();
-            if (lowerLine.match(/assignment\s*:/)) {
-                foundSubsections.get('header')?.add('assignment');
-            } else if (lowerLine.match(/student\s*:/)) {
-                foundSubsections.get('header')?.add('student');
-            } else if (lowerLine.match(/date\s*:/)) {
-                foundSubsections.get('header')?.add('date');
-            } else if (lowerLine.match(/collaborators\s*:/)) {
-                foundSubsections.get('header')?.add('collaborators');
+            // Special handling for input-output (multiple pairs allowed)
+            if (tagName === 'input-output') {
+                if (line.includes('input:')) {
+                    foundSubtags.add('input:');
+                }
+                if (line.includes('output:')) {
+                    foundSubtags.add('output:');
+                }
             }
         }
 
-        // Check for proof subsections
-        if (currentProofType === 'induction') {
-            if (line.toLowerCase().includes('base case:')) {
-                foundSubsections.get('induction')?.add('base case');
-            } else if (line.toLowerCase().includes('induction hypothesis:')) {
-                foundSubsections.get('induction')?.add('induction hypothesis');
-            } else if (line.toLowerCase().includes('inductive step:')) {
-                foundSubsections.get('induction')?.add('inductive step');
-            }
-        } else if (currentProofType === 'invariant') {
-            if (line.toLowerCase().includes('pre-condition:')) {
-                foundSubsections.get('invariant')?.add('pre-condition');
-            } else if (line.toLowerCase().includes('after the ith step:')) {
-                foundSubsections.get('invariant')?.add('after the ith step');
-            } else if (line.toLowerCase().includes('after the (i+1)th step:')) {
-                foundSubsections.get('invariant')?.add('after the (i+1)th step');
-            } else if (line.toLowerCase().includes('post-condition:')) {
-                foundSubsections.get('invariant')?.add('post-condition');
-            }
-        }
-    }
+        // Check for missing required subtags
+        const missingSubtags = requiredSubtags.filter(subtag => !foundSubtags.has(subtag));
 
-    private validateRequiredSubsections(
-        sectionName: string,
-        foundSubsections: Set<string>,
-        requiredSubsections: string[],
-        diagnostics: vscode.Diagnostic[],
-        lineNumber: number
-    ): void {
-        const missingSubsections = requiredSubsections.filter(sub => !foundSubsections.has(sub));
-
-        if (missingSubsections.length > 0) {
+        if (missingSubtags.length > 0) {
             diagnostics.push(new vscode.Diagnostic(
-                new vscode.Range(lineNumber, 0, lineNumber, 10),
-                `Section '${sectionName}' is missing required subsections: ${missingSubsections.join(', ')}`,
+                new vscode.Range(endLine, 0, endLine, 10),
+                `Tag '${tagName}' is missing required subtags: ${missingSubtags.join(', ')}`,
                 vscode.DiagnosticSeverity.Error
             ));
         }
     }
 
-    private getAvailableSteps(document: vscode.TextDocument): number[] {
-        const steps: number[] = [];
-        const content = document.getText();
-        const lines = content.split('\n');
-        let inOperationalSteps = false;
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-
-            if (trimmed === '<<operational steps') {
-                inOperationalSteps = true;
-                continue;
-            }
-
-            if (inOperationalSteps && trimmed === 'operational steps>>') {
-                inOperationalSteps = false;
-                continue;
-            }
-
-            if (inOperationalSteps) {
-                // Fixed regex to handle 'step [number]:' format
-                const stepMatch = trimmed.match(/^\s*step\s+(\d+)\s*[.:]?\s*/i);
-                if (stepMatch) {
-                    steps.push(parseInt(stepMatch[1]));
-                }
-            }
-        }
-
-        return steps;
-    }
-
-    private validateStepReferences(
-        line: string,
-        document: vscode.TextDocument,
-        lineNumber: number,
-        diagnostics: vscode.Diagnostic[]
-    ): void {
-        const stepReferences = line.match(/step (\d+)/g);
-        if (!stepReferences) return;
-
-        const availableSteps = this.getAvailableSteps(document);
-
-        for (const stepRef of stepReferences) {
-            const stepMatch = stepRef.match(/step (\d+)/);
-            if (stepMatch) {
-                const stepNumber = parseInt(stepMatch[1]);
-                if (!availableSteps.includes(stepNumber)) {
-                    const startChar = line.indexOf(stepRef);
-                    diagnostics.push(new vscode.Diagnostic(
-                        new vscode.Range(lineNumber, startChar, lineNumber, startChar + stepRef.length),
-                        `Step ${stepNumber} is referenced but not defined in operational steps`,
-                        vscode.DiagnosticSeverity.Warning
-                    ));
-                }
-            }
-        }
-    }
-
-    // Method to provide syntax highlighting tokens
+    // Enhanced syntax highlighting
     provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.SemanticTokens {
         const tokensBuilder = new vscode.SemanticTokensBuilder();
         const content = document.getText();
@@ -409,37 +314,25 @@ export class ICSValidator {
             const line = lines[i];
             const trimmed = line.trim();
 
-            // Check for section headers
-            if (trimmed.match(/^<<blueprint$/) || trimmed.match(/^blueprint>>$/)) {
-                tokensBuilder.push(
-                    new vscode.Range(i, 0, i, line.length),
-                    'keyword',
-                    ['blue']
-                );
-            } else if (trimmed.match(/^<<operational steps$/) || trimmed.match(/^operational steps>>$/)) {
-                tokensBuilder.push(
-                    new vscode.Range(i, 0, i, line.length),
-                    'keyword',
-                    ['purple']
-                );
-            } else if (trimmed.match(/^<<ocaml code$/) || trimmed.match(/^ocaml code>>$/)) {
-                tokensBuilder.push(
-                    new vscode.Range(i, 0, i, line.length),
-                    'keyword',
-                    ['orange']
-                );
-            } else if (trimmed.match(/^<<(proof|induction|invariant)$/) || trimmed.match(/^(proof|induction|invariant)>>$/)) {
-                tokensBuilder.push(
-                    new vscode.Range(i, 0, i, line.length),
-                    'keyword',
-                    ['green']
-                );
-            } else if (trimmed.match(/^<<header$/) || trimmed.match(/^header>>$/)) {
-                tokensBuilder.push(
-                    new vscode.Range(i, 0, i, line.length),
-                    'keyword',
-                    ['cyan']
-                );
+            // Highlight problem tags
+            if (trimmed.match(/^<<problem\s+\d+/) || trimmed === 'problem>>') {
+                tokensBuilder.push(new vscode.Range(i, 0, i, line.length), 'keyword', ['red']);
+            }
+            // Highlight blueprint tags
+            else if (trimmed === '<<blueprint' || trimmed === 'blueprint>>') {
+                tokensBuilder.push(new vscode.Range(i, 0, i, line.length), 'keyword', ['blue']);
+            }
+            // Highlight proof tags
+            else if (trimmed === '<<proof' || trimmed === 'proof>>') {
+                tokensBuilder.push(new vscode.Range(i, 0, i, line.length), 'keyword', ['green']);
+            }
+            // Highlight ocaml-code tags
+            else if (trimmed === '<<ocaml-code' || trimmed === 'ocaml-code>>') {
+                tokensBuilder.push(new vscode.Range(i, 0, i, line.length), 'keyword', ['orange']);
+            }
+            // Highlight other opening and closing tags
+            else if (trimmed.match(/^<<[^>]+$/) || trimmed.match(/^[^<]+>>$/)) {
+                tokensBuilder.push(new vscode.Range(i, 0, i, line.length), 'keyword', ['purple']);
             }
         }
 

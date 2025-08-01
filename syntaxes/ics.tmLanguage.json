@@ -27,12 +27,32 @@
         "keywords": {
             "patterns": [
                 {
-                    "name": "keyword.control.ics",
-                    "match": "\\b(blueprint|operational-steps|ocaml-code|proof|induction|invariant|header)\\b"
+                    "name": "keyword.control.primary.ics",
+                    "match": "(?i)\\b(problem|tex|helper|header|name|assignment|professor|date|collaborators)\\b"
                 },
                 {
-                    "name": "keyword.other.ics",
-                    "match": "\\b(functional-correctness|complexity|input-output|requires|ensures|base case|inductive hypothesis|inductive step|initialisation|maintainence|termination|assignment|student|date|collaborators|problem|helper)\\b"
+                    "name": "keyword.blueprint.secondary.ics",
+                    "match": "(?i)\\b(functional-correctness|complexity|input-output|requires|ensures|blueprint|time|space|input|output)\\b"
+                },
+                {
+                    "name": "keyword.operationalsteps.secondary.ics",
+                    "match": "(?i)\\b(operational-steps|step)\\b"
+                },
+                {
+                    "name": "keyword.ocamlcode.secondary.ics",
+                    "match": "(?i)\\b(ocaml-code)\\b"
+                },
+                {
+                    "name": "keyword.proof.secondary.ics",
+                    "match": "(?i)\\b(proof|induction|invariant|base case|inductive hypothesis|inductive step|maintenance|initialisation|termination)\\b"
+                },
+                {
+                    "name": "keyword.textanswer.secondary.ics",
+                    "match": "(?i)\\b(text-answer)\\b"
+                },
+                {
+                    "name": "keyword.control.tertiary.ics",
+                    "match": "(?i)\\b(helper|step|tex)\\b"
                 }
             ]
         },
@@ -69,21 +89,21 @@
             "patterns": [
                 {
                     "name": "keyword.other.ocaml.ics",
-                    "match": "\\b(let|in|match|with|when|fun|function|if|then|else|type|val|module|open|ref|while|do|done|for|to|downto)\\b"
+                    "match": "(?i)\\b(let|in|match|with|when|fun|function|if|then|else|type|val|module|open|ref|while|do|done|for|to|downto)\\b"
                 },
                 {
                     "name": "support.function.ocaml.ics",
-                    "match": "\\b(List\\.(length|nth|map|fold_left|fold_right)|Array\\.(length|get|set|make))\\b"
+                    "match": "(?i)\\b(List\\.(length|nth|map|fold_left|fold_right)|Array\\.(length|get|set|make))\\b"
                 }
             ]
         },
         "step-references": {
             "name": "markup.other.step-reference.ics",
-            "match": "\\b(Step \\d+|step \\d+)\\b"
+            "match": "(?i)\\b(Step \\d+|step \\d+)\\b"
         },
         "operational-steps-block": {
-            "begin": "<<operational steps",
-            "end": "operational steps>>",
+            "begin": "(?i)<<operational steps",
+            "end": "(?i)operational steps>>",
             "name": "meta.operational-steps.ics",
             "beginCaptures": {
                 "0": {
@@ -109,7 +129,7 @@
         },
         "step-definition": {
             "name": "entity.name.function.step-definition.ics",
-            "match": "\\bstep\\s+\\d+\\b"
+            "match": "(?i)\\bstep\\s+\\d+\\b"
         }
     }
 }

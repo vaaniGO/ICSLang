@@ -1,0 +1,24 @@
+{
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": "keyword.control.primary.ics",
+                "settings": {
+                    "foreground": "#FF6B6B" // Red
+                }
+            },
+            {
+                "scope": "keyword.control.secondary.ics",
+                "settings": {
+                    "foreground": "#4ECDC4" // Teal
+                }
+            },
+            {
+                "scope": "keyword.control.tertiary.ics",
+                "settings": {
+                    "foreground": "#45B7D1" // Blue
+                }
+            }
+        ]
+    }
+}
