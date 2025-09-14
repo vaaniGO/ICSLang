@@ -53,7 +53,7 @@ function activate(context) {
             vscode.window.showErrorMessage('Please open an ICS file to compile');
             return;
         }
-        const compiler = new compiler_1.ICSCompiler();
+        const compiler = new compiler_1.ICSCompiler(context);
         compiler.compile(editor.document);
     });
     const execAsync = (0, util_1.promisify)(child_process_1.exec);
@@ -85,7 +85,7 @@ function activate(context) {
             delete require.cache[require.resolve(compiledPath)];
             // Now import and use
             const { ICSCompiler } = require(compiledPath);
-            const compiler = new ICSCompiler();
+            const compiler = new ICSCompiler(context);
             await compiler.compile(editor.document);
         }
         catch (error) {
@@ -304,7 +304,7 @@ class ICSCompletionProvider {
         const completions = [];
         // Main section completions - changed to << syntax
         if (linePrefix.endsWith('<<')) {
-            completions.push(this.createSectionCompletion('blueprint', 'Blueprint section with requires and ensures'), this.createSectionCompletion('operational steps', 'Operational steps section'), this.createSectionCompletion('ocaml code', 'OCaml code section'), this.createSectionCompletion('proof', 'Proof section'), this.createSectionCompletion('induction', 'Induction proof'), this.createSectionCompletion('invariant', 'Invariant proof'), this.createSectionCompletion('header', 'Header section with document metadata'));
+            completions.push(this.createSectionCompletion('blueprint', 'Blueprint section with requires and ensures'), this.createSectionCompletion('operational-steps', 'Operational steps section'), this.createSectionCompletion('ocaml-code', 'OCaml code section'), this.createSectionCompletion('proof', 'Proof section'), this.createSectionCompletion('induction', 'Induction proof'), this.createSectionCompletion('invariant', 'Invariant proof'), this.createSectionCompletion('header', 'Header section with document metadata'));
         }
         // Enhanced step reference completions - trigger on "step" or "step "
         if (linePrefix.match(/step\s*$/i) || linePrefix.match(/step\s+\d*$/i)) {

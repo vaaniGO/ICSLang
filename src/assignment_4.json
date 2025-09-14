@@ -1,0 +1,15 @@
+{
+    "Problems": [
+        {
+            "Number": "1",
+            "Blueprint": [
+                "FunctionalCorrectness",
+                "Complexity",
+                "Input-Output"
+            ],
+            "Operational Steps": null,
+            "Ocaml Code": null,
+            "Proof": null
+        }
+    ]
+}

@@ -448,33 +448,49 @@
 	<h2 id="2-blueprint">2. Blueprint</h2>
 	<p>This main-section is intended for the user to lay out the correctness criteria of their program i.e. what are the
 		characeteristics (formally) of the input and output that must hold true for the program to be considered
-		correct.</p>
+		correct. The allowed sub-sections are depicted below. In the input-output section, you must provide inputs and
+		their corresponding outputs in pairs only. Do not write just inputs or outputs.</p>
 	<div style="text-align: left; margin-left: 5%; ">
 		<<<span style="color: #e6ea92;">blueprint</span> <br>
-			<span style="color: aqua">requires</span>: ... <br>
-			<span style="color: aqua">ensures</span>:...
-			<p><span style="color: #e6ea92;">blueprint</span>&gt;&gt;</p>
+			<<<span style="color: aqua;">functional-correctness</span> <br>
+				<span style="color: white">requires</span>: ... <br>
+				<span style="color: white">ensures</span>: ...
+				<p><span style="color: aqua;">functional-correctness</span>&gt;&gt;</p>
+
+				<<<span style="color: aqua;">complexity</span> <br>
+					<span style="color: white">time</span>: ... <br>
+					<span style="color: white">space</span>: ...
+					<p><span style="color: aqua;">complexity</span>&gt;&gt;</p>
+
+					<<<span style="color: aqua;">input-output</span> <br>
+						<span style="color: white">input</span>: ... <br>
+						<span style="color: white">output</span>: ... <br>
+						<span style="color: white">input</span>: ... <br>
+						<span style="color: white">output</span>: ...
+						<p><span style="color: aqua;">input-output</span>&gt;&gt;</p>
+						<p><span style="color: #e6ea92;">blueprint</span>&gt;&gt;</p>
+
 	</div>
 	<hr>
 	<h2 id="3-operational-steps">3. Operational Steps</h2>
 	<p>This section is for the user to explain their algorithm (process) for solving the given problem as if to a human.
 	</p>
 	<div style="text-align: left; margin-left: 5%; ">
-		<<<span style="color: #e6ea92;">operational steps</span> <br>
+		<<<span style="color: #e6ea92;">operational-steps</span> <br>
 			<span style="color: aqua">step 1</span>: Considering the base case n=0, we can think
 			of the problem as one.... <br>
-			<span style="color: aqua">step n</span>:...
+			<span style="color: aqua">step n</span>: ...
 
-			<p><span style="color: #e6ea92;">operational steps</span>&gt;&gt;</p>
+			<p><span style="color: #e6ea92;">operational-steps</span>&gt;&gt;</p>
 	</div>
 	<hr>
 	<h2 id="4-ocaml-code">4. Ocaml Code</h2>
 	<p>Write your standard ICS-friendly OCaml code here. It will be validated by the ICS OCaml validator.</p>
 	<div style="text-align: left; margin-left: 5%; ">
-		<<<span style="color: #e6ea92;">ocaml code</span>
+		<<<span style="color: #e6ea92;">ocaml-code</span>
 			<br>(* Write your code in regular OCaml syntax, following ICS guidelines *)
 
-			<p><span style="color: #e6ea92;">ocaml code</span>&gt;&gt;</p>
+			<p><span style="color: #e6ea92;">ocaml-code</span>&gt;&gt;</p>
 	</div>
 	<p>The status of your code is then reflected in the compiled version as so:</p>
 	<div align="center">
@@ -492,14 +508,15 @@
 	<hr>
 	<h2 id="5-%F0%9F%93%96-proof">5. 📖 Proof</h2>
 	<p>This section is intended for the user to provide a complete and formal proof that their program satisfies the
-		given correctness criteria in the blueprint.</p>
+		given correctness criteria in the blueprint. You are allowed to write multiple proofs (by opening multiple
+		induction or invariant tags) within one proof tag.</p>
 	<h3 id="proof-by-induction-would-look-like">Proof by induction would look like:</h3>
 	<div style="text-align: left; margin-left: 5%; ">
 		<<<span style="color: #e6ea92;">proof</span> <br>
 			<<<span style="color: #e6ea92;">induction</span> <br> <br>
 				<span style="color: aqua;">base case</span>: ... <br> <br>
-				<span style="color: aqua;">induction hypothesis</span>: ... <br><br>
-				<span style="color: aqua;">indutive step</span>: ... <br> <br>
+				<span style="color: aqua;">inductive hypothesis</span>: ... <br><br>
+				<span style="color: aqua;">inductive step</span>: ... <br> <br>
 				<span style="color: #e6ea92;">induction</span>>><br>
 				<p><span style="color: #e6ea92;">proof</span>&gt;&gt;</p>
 	</div>
@@ -507,21 +524,18 @@
 	<div style="text-align: left; margin-left: 5%; ">
 		<<<span style="color: #e6ea92;">proof</span> <br>
 			<<<span style="color: #e6ea92;">invariant</span> <br> <br>
-				<span style="color: aqua;">pre-condition</span>: ... <br> <br>
-				<span style="color: aqua;">after the ith step</span>: ... <br><br>
-				<span style="color: aqua;">after the (i+1)th step</span>: ... <br> <br>
-				<span style="color: aqua;">post-condition</span>: ... <br> <br>
+				<span style="color: aqua;">initialisation</span>: ... <br> <br>
+				<span style="color: aqua;">maintenance</span>: ... <br><br>
+				<span style="color: aqua;">termination</span>: ... <br> <br>
 				<span style="color: #e6ea92;">invariant</span>>><br>
 				<p><span style="color: #e6ea92;">proof</span>&gt;&gt;</p>
 	</div>
 	<h2 id="usage">Usage:</h2>
 	<ol>
-		<li>Install dependencies in your working folder (Assuming you have opam installed. opam is the package manager
-			for OCaml.)</li>
-	</ol>
-	<pre class="hljs"><code><div>opam install dune ocaml odoc ppxlib
-</div></code></pre>
-	<ol start="2">
+		<li>Install the extension "BOOP: How to Write Right Code!" on VS Code (search for it on the extensions tab).
+			When you
+			install it, you can also set color theme and select 'ICS Theme' on the top of your screen. </li>
+		<img src="set-theme.png" alt="Set Theme" width="300px" />
 		<li>Create your .ics file in your working folder</li>
 		<li>Open the command palette (Cmd+Shift+P on mac or Ctrl+Shift+P on windows)</li>
 		<li>Type ICS</li>
@@ -530,6 +544,8 @@
 			will be available on <code>Desktop/output</code>. Most users may discard this file if you do not need it.
 		</li>
 	</ol>
+	A preview of what a solution in BOOP on VS Code with the ICS Theme looks like:
+	<img src="preview.png" alt="Preview" width="300px" />
 	<h6 style="color: red;">Please note that the dropdown option: 'Compile for assignment #1' is a test option and not
 		relevant to current users!</h6>
 	<!-- <h2 id="information-for-instructors">Information for Instructors</h2>
@@ -553,13 +569,10 @@
 	</p>
 	<h3 id="version-info">Version Info</h3>
 	<p>Developer and Maintainer: Vaani Goenka vaani.goenka_ug2024@ashoka.edu.in <br>
+		Please write to me to report bugs! <br>
 		Changelog <br>
 		0.5.0 <br>
-		Second major release <br>
-		OCaml code validation <br>
-		Instructor discretion to add plugins to customise validation <br>
-		Better extension features like collapsing sections <br>
-		Better error messages</p>
+		Release for ICS Monsoon 2025.
 
 </body>
 

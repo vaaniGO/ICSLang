@@ -1,0 +1,3 @@
+(executable
+ (name ocaml_ast)
+ (libraries compiler-libs.common yojson))

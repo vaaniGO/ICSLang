@@ -53,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        const compiler = new ICSCompiler();
+        const compiler = new ICSCompiler(context);
         compiler.compile(editor.document);
     });
 
@@ -95,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Now import and use
             const { ICSCompiler } = require(compiledPath);
-            const compiler = new ICSCompiler();
+            const compiler = new ICSCompiler(context);
             await compiler.compile(editor.document);
 
         } catch (error) {
@@ -372,8 +372,8 @@ class ICSCompletionProvider implements vscode.CompletionItemProvider {
         if (linePrefix.endsWith('<<')) {
             completions.push(
                 this.createSectionCompletion('blueprint', 'Blueprint section with requires and ensures'),
-                this.createSectionCompletion('operational steps', 'Operational steps section'),
-                this.createSectionCompletion('ocaml code', 'OCaml code section'),
+                this.createSectionCompletion('operational-steps', 'Operational steps section'),
+                this.createSectionCompletion('ocaml-code', 'OCaml code section'),
                 this.createSectionCompletion('proof', 'Proof section'),
                 this.createSectionCompletion('induction', 'Induction proof'),
                 this.createSectionCompletion('invariant', 'Invariant proof'),

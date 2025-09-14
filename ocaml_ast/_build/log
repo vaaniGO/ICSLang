@@ -1,0 +1,24 @@
+# dune build
+# OCAMLPARAM: unset
+# Shared cache: enabled-except-user-rules
+# Shared cache location: /Users/vaani/.cache/dune/db
+# Workspace root: /Users/vaani/Desktop/ICSLang/ocaml_ast
+# Auto-detected concurrency: 8
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dev
+#  ; merlin = true
+#  ; fdo_target_exe = None
+#  ; build_dir = In_build_dir "default"
+#  ; instrument_with = []
+#  }
+$ /Users/vaani/.opam/default/bin/ocamlc.opt -config > /var/folders/ht/l9t79f_124l09208c_wx80fw0000gn/T/dune_1d7109_output
+$ (cd _build/default && /Users/vaani/.opam/default/bin/ocamldep.opt -modules -impl ocaml_ast.ml) > _build/default/.ocaml_ast.eobjs/dune__exe__Ocaml_ast.impl.d
+$ (cd _build/default && /Users/vaani/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@31..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I .ocaml_ast.eobjs/byte -I .ocaml_ast.eobjs/native -I /Users/vaani/.opam/default/lib/ocaml/compiler-libs -I /Users/vaani/.opam/default/lib/seq -I /Users/vaani/.opam/default/lib/yojson -intf-suffix .ml -no-alias-deps -opaque -open Dune__exe -o .ocaml_ast.eobjs/native/dune__exe__Ocaml_ast.cmx -c -impl ocaml_ast.ml)
+> File "ocaml_ast.ml", line 8, characters 63-71:
+> 8 |   lexbuf.lex_curr_pos <- { lexbuf.lex_curr_pos with pms_name = filename };
+>                                                                    ^^^^^^^^
+> Error: The value filename has type string
+>        but an expression was expected of type string Location.loc
+[2]

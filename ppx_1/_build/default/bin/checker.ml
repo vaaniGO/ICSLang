@@ -19,13 +19,14 @@ let check_file filename =
     enforcer#structure ast;
     Printf.printf "✅ YAYCaml! %s\n" filename
   with
-  | Location.Error _ ->
+  | Location.Error error ->
       (* Simple error printing that should work across versions *)
-      Printf.eprintf "🐫 OOPSCaml! Error: in %s \n" filename;
-      (* Printf.eprintf "Location error: %s\n" (Printexc.to_string (Location.Error error)); *)
+      (* Printf.eprintf "🐫 OOPSCaml! Error: in %s \n" filename; *)
+      Printf.eprintf "Location error: %s\n" (Printexc.to_string (Location.Error error));
       exit 1
-  | Syntaxerr.Error _ ->
+  | Syntaxerr.Error error ->
       Printf.eprintf "🐫 OOPSCaml! Syntax error in %s \n" filename;
+      Printf.eprintf "Syntax error: %s\n" (Printexc.to_string (Syntaxerr.Error error));
       exit 1
   | exn ->
       Printf.eprintf "🐫 OOPSCaml! An unexpected error occurred in %s %s\n" filename (Printexc.to_string exn);
